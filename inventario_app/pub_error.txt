@@ -1,0 +1,29 @@
+﻿Resolving dependencies...
+flutter : Because 
+inventario_app depends on 
+fl_chart 1.0.1 which 
+doesn't match any versions, 
+version solving failed.
+En línea: 1 Carácter: 1
++ flutter pub get 2>&1 | 
+out-file -encoding utf8 
+pub_error.txt; cat pub ...
++ ~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          
+    : NotSpecified: (Becau  
+  se inventa...solving fa   
+ iled.:String) [], Remot    
+eException
+    + FullyQualifiedErrorId 
+    : NativeCommandError
+ 
+
+
+You can try the following 
+suggestion to make the 
+pubspec resolve:
+* Try upgrading your 
+constraint on fl_chart: 
+flutter pub add 
+fl_chart:^1.1.0
+Failed to update packages.
