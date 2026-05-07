@@ -1,0 +1,78 @@
+# Uncomment this line to define a global platform for your project
+platform :ios, '13.0'
+
+# CocoaPods analytics sends network stats synchronously affecting flutter build latency.
+ENV['COCOAPODS_DISABLE_STATS'] = 'true'
+
+project 'Runner', {
+  'Debug' => :debug,
+  'Profile' => :release,
+  'Release' => :release,
+}
+
+def flutter_root
+  generated_xcode_build_settings_path = File.expand_path(File.join('..', 'Flutter', 'Generated.xcconfig'), __FILE__)
+  unless File.exist?(generated_xcode_build_settings_path)
+    raise "#{generated_xcode_build_settings_path} must exist. If you're running pod install manually, make sure flutter pub get is executed first"
+  end
+
+  File.foreach(generated_xcode_build_settings_path) do |line|
+    matches = line.match(/FLUTTER_ROOT\=(.*)/)
+    return matches[1].strip if matches
+  end
+  raise "FLUTTER_ROOT not found in #{generated_xcode_build_settings_path}. Try deleting Generated.xcconfig, then run flutter pub get"
+end
+
+require File.expand_path(File.join('packages', 'flutter_tools', 'bin', 'podhelper'), flutter_root)
+
+flutter_ios_podfile_setup
+
+target 'Runner' do
+  use_frameworks!
+
+  flutter_install_all_ios_pods File.dirname(File.realpath(__FILE__))
+  target 'RunnerTests' do
+    inherit! :search_paths
+  end
+end
+
+post_install do |installer|
+  installer.pods_project.targets.each do |target|
+    flutter_additional_ios_build_settings(target)
+
+    # Strip macOS extended attributes that break codesign (iCloud adds FinderInfo to build dirs)
+    next if target.build_phases.any? { |p| p.respond_to?(:name) && p.name == 'Strip Extended Attributes' }
+    phase = target.new_shell_script_build_phase('Strip Extended Attributes')
+    phase.shell_script = 'xattr -cr "${BUILT_PRODUCTS_DIR}/${WRAPPER_NAME}" 2>/dev/null; xattr -cr "${TARGET_BUILD_DIR}/${WRAPPER_NAME}" 2>/dev/null; exit 0'
+    phase.run_only_for_deployment_postprocessing = '0'
+  end
+  installer.pods_project.save
+
+  # Also add xattr stripping to the main Runner target so Runner.app can be codesigned
+  require 'xcodeproj'
+  main_project_path = File.expand_path('../Runner.xcodeproj', __FILE__)
+  main_project = Xcodeproj::Project.open(main_project_path)
+  main_project.targets.each do |target|
+    next unless target.name == 'Runner'
+    next if target.build_phases.any? { |p| p.respond_to?(:name) && p.name == 'Strip Extended Attributes' }
+    phase = target.new_shell_script_build_phase('Strip Extended Attributes')
+    phase.shell_script = 'find "${BUILT_PRODUCTS_DIR}/${WRAPPER_NAME}" -exec xattr -d com.apple.FinderInfo {} \; 2>/dev/null; exit 0'
+    phase.run_only_for_deployment_postprocessing = '0'
+  end
+  main_project.save
+
+  # Patch the generated Pods-Runner-frameworks.sh to strip FinderInfo before codesigning.
+  # iCloud Drive adds com.apple.FinderInfo to framework directories, which blocks codesign.
+  frameworks_script = File.expand_path('../Pods/Target Support Files/Pods-Runner/Pods-Runner-frameworks.sh', __FILE__)
+  if File.exist?(frameworks_script)
+    content = File.read(frameworks_script)
+    original_sign_line = "    local code_sign_cmd=\"/usr/bin/codesign --force --sign"
+    xattr_strip = "    find \"$1\" -exec xattr -d com.apple.FinderInfo {} \\; 2>/dev/null\n"
+    if !content.include?(xattr_strip) && content.include?(original_sign_line)
+      content.gsub!(original_sign_line, xattr_strip + original_sign_line)
+      File.write(frameworks_script, content)
+    end
+  end
+
+  system('find . -exec xattr -c {} \; 2>/dev/null')
+end
