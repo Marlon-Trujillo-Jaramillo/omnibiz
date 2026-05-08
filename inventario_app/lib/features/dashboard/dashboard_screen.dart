@@ -8,6 +8,7 @@ import 'package:inventario_app/features/sales/pos_screen.dart';
 import 'package:inventario_app/widgets/sales_chart.dart';
 import 'package:inventario_app/features/sales/sales_provider.dart';
 import 'package:inventario_app/features/customers/customers_screen.dart';
+import 'package:inventario_app/models/product_model.dart';
 
 class DashboardScreen extends ConsumerWidget {
   final String businessType;
@@ -20,11 +21,16 @@ class DashboardScreen extends ConsumerWidget {
     final sales = ref.watch(salesProvider);
     final theme = Theme.of(context);
 
-    final dailyTotal = sales.fold(0.0, (sum, sale) => sum + sale.totalAmount);
+    final weekAgo = DateTime.now().subtract(const Duration(days: 7));
+    final weeklyTotal = sales
+        .where((s) => s.createdAt.isAfter(weekAgo))
+        .fold(0.0, (sum, s) => sum + s.totalAmount);
+
+    final lowStock = products.where((p) => p.isLowStock && p.stock > 0).toList();
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
-      drawer: _buildDrawer(context),
+      drawer: _buildDrawer(context, ref),
       body: SafeArea(
         child: CustomScrollView(
           physics: const BouncingScrollPhysics(),
@@ -34,15 +40,19 @@ class DashboardScreen extends ConsumerWidget {
               padding: const EdgeInsets.symmetric(horizontal: 20),
               sliver: SliverList(
                 delegate: SliverChildListDelegate([
-                  _buildStatusOverview(context, products.length, dailyTotal),
+                  _buildStatusOverview(context, products, weeklyTotal),
                   const SizedBox(height: 32),
                   const SalesChart(),
                   const SizedBox(height: 32),
-                  _buildSectionTitle(context, 'Acciones Rápidas'),
+                  _sectionTitle('Acciones Rápidas'),
                   const SizedBox(height: 16),
                   _buildQuickActions(context),
+                  if (lowStock.isNotEmpty) ...[
+                    const SizedBox(height: 32),
+                    _LowStockSection(products: lowStock),
+                  ],
                   const SizedBox(height: 32),
-                  _buildSectionTitle(context, 'Stock Reciente'),
+                  _sectionTitle('Inventario Reciente'),
                   const SizedBox(height: 16),
                   if (products.isEmpty)
                     const Center(
@@ -58,6 +68,7 @@ class DashboardScreen extends ConsumerWidget {
                     ...products.reversed
                         .take(5)
                         .map((p) => _ProductListItem(product: p)),
+                  const SizedBox(height: 24),
                 ]),
               ),
             ),
@@ -68,16 +79,22 @@ class DashboardScreen extends ConsumerWidget {
         onPressed: () {
           Navigator.push(
             context,
-            MaterialPageRoute(builder: (c) => const POSScreen()),
+            MaterialPageRoute(builder: (_) => const POSScreen()),
           );
         },
-        icon: const Icon(LucideIcons.plus),
+        icon: const Icon(LucideIcons.shoppingCart),
         label: const Text('Nueva Venta'),
       ),
     );
   }
 
   Widget _buildAppBar(BuildContext context) {
+    final typeLabel = businessType == 'retail'
+        ? 'Comercio / Retail'
+        : businessType == 'fnb'
+            ? 'Restaurante / Bar'
+            : 'Local Comercial';
+
     return SliverAppBar(
       expandedHeight: 120,
       backgroundColor: Colors.transparent,
@@ -98,11 +115,8 @@ class DashboardScreen extends ConsumerWidget {
                 ),
               ),
               Text(
-                'Hola, Admin • ${businessType == 'retail' ? 'Comercio' : 'Restaurante'}',
-                style: const TextStyle(
-                  color: Colors.white54,
-                  letterSpacing: 0.5,
-                ),
+                'Hola, Admin · $typeLabel',
+                style: const TextStyle(color: Colors.white54, letterSpacing: 0.4),
               ),
             ],
           ),
@@ -113,15 +127,17 @@ class DashboardScreen extends ConsumerWidget {
 
   Widget _buildStatusOverview(
     BuildContext context,
-    int productCount,
-    double totalSales,
+    List<Product> products,
+    double weeklyTotal,
   ) {
+    final totalStock = products.fold(0, (s, p) => s + p.stock);
+
     return Row(
       children: [
         Expanded(
           child: _OverviewCard(
-            title: 'Ventas Semanales',
-            value: '\$${totalSales.toStringAsFixed(2)}',
+            title: 'Ventas 7 días',
+            value: '\$${weeklyTotal.toStringAsFixed(2)}',
             icon: LucideIcons.trendingUp,
             color: Colors.greenAccent,
           ),
@@ -129,8 +145,8 @@ class DashboardScreen extends ConsumerWidget {
         const SizedBox(width: 16),
         Expanded(
           child: _OverviewCard(
-            title: 'Stock Total',
-            value: '$productCount',
+            title: 'Unidades en Stock',
+            value: '$totalStock',
             icon: LucideIcons.box,
             color: Colors.blueAccent,
           ),
@@ -139,7 +155,7 @@ class DashboardScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildSectionTitle(BuildContext context, String title) {
+  Widget _sectionTitle(String title) {
     return Text(
       title,
       style: GoogleFonts.outfit(
@@ -165,7 +181,8 @@ class DashboardScreen extends ConsumerWidget {
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (c) => AddProductScreen(businessType: businessType),
+                  builder: (_) =>
+                      AddProductScreen(businessType: businessType),
                 ),
               );
             },
@@ -177,7 +194,7 @@ class DashboardScreen extends ConsumerWidget {
             onTap: () {
               Navigator.push(
                 context,
-                MaterialPageRoute(builder: (c) => const POSScreen()),
+                MaterialPageRoute(builder: (_) => const POSScreen()),
               );
             },
           ),
@@ -188,22 +205,16 @@ class DashboardScreen extends ConsumerWidget {
             onTap: () {
               Navigator.push(
                 context,
-                MaterialPageRoute(builder: (c) => const CustomersScreen()),
+                MaterialPageRoute(builder: (_) => const CustomersScreen()),
               );
             },
-          ),
-          _QuickActionItem(
-            label: 'Ver Reportes',
-            icon: LucideIcons.barChart,
-            color: Colors.cyanAccent,
-            onTap: () {},
           ),
         ],
       ),
     );
   }
 
-  Widget _buildDrawer(BuildContext context) {
+  Widget _buildDrawer(BuildContext context, WidgetRef ref) {
     return Drawer(
       backgroundColor: const Color(0xFF141414),
       child: Column(
@@ -223,36 +234,121 @@ class DashboardScreen extends ConsumerWidget {
               ),
             ),
           ),
-          _buildDrawerItem(
-            LucideIcons.home,
-            'Inicio',
-            () => Navigator.pop(context),
-          ),
-          _buildDrawerItem(LucideIcons.package, 'Inventario', () {}),
-          _buildDrawerItem(LucideIcons.shoppingBag, 'Ventas', () {}),
-          _buildDrawerItem(LucideIcons.users, 'Clientes', () {}),
+          _drawerItem(LucideIcons.home, 'Inicio', () => Navigator.pop(context)),
+          _drawerItem(LucideIcons.plusCircle, 'Añadir Producto', () {
+            Navigator.pop(context);
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => AddProductScreen(businessType: businessType),
+              ),
+            );
+          }),
+          _drawerItem(LucideIcons.shoppingCart, 'Terminal POS', () {
+            Navigator.pop(context);
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const POSScreen()),
+            );
+          }),
+          _drawerItem(LucideIcons.users, 'Clientes', () {
+            Navigator.pop(context);
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const CustomersScreen()),
+            );
+          }),
           const Spacer(),
-          _buildDrawerItem(LucideIcons.settings, 'Configuración', () {}),
-          const SizedBox(height: 24),
+          const Divider(color: Colors.white12),
+          const Padding(
+            padding: EdgeInsets.all(16),
+            child: Text(
+              'OmniBiz Automation v1.0',
+              style: TextStyle(color: Colors.white24, fontSize: 11),
+            ),
+          ),
+          const SizedBox(height: 8),
         ],
       ),
     );
   }
 
-  Widget _buildDrawerItem(IconData icon, String title, VoidCallback onTap) {
+  Widget _drawerItem(IconData icon, String title, VoidCallback onTap) {
     return ListTile(
       leading: Icon(icon, color: Colors.white54, size: 20),
       title: Text(
         title,
-        style: const TextStyle(
-          color: Colors.white,
-          fontWeight: FontWeight.w500,
-        ),
+        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w500),
       ),
       onTap: onTap,
     );
   }
 }
+
+// ── Low stock section ────────────────────────────────────────────────────────
+
+class _LowStockSection extends StatelessWidget {
+  final List<Product> products;
+  const _LowStockSection({required this.products});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            const Icon(LucideIcons.alertTriangle, color: Colors.amberAccent, size: 18),
+            const SizedBox(width: 8),
+            Text(
+              'Stock Bajo (${products.length})',
+              style: GoogleFonts.outfit(
+                fontSize: 20,
+                fontWeight: FontWeight.w600,
+                color: Colors.amberAccent,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        ...products.map(
+          (p) => Container(
+            margin: const EdgeInsets.only(bottom: 8),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            decoration: BoxDecoration(
+              color: Colors.amberAccent.withAlpha(8),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: Colors.amberAccent.withAlpha(30)),
+            ),
+            child: Row(
+              children: [
+                const Icon(LucideIcons.package, color: Colors.amberAccent, size: 18),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    p.name,
+                    style: const TextStyle(fontWeight: FontWeight.w600),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                Text(
+                  '${p.stock} restantes',
+                  style: const TextStyle(
+                    color: Colors.amberAccent,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 13,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+// ── Overview card ────────────────────────────────────────────────────────────
 
 class _OverviewCard extends StatelessWidget {
   final String title;
@@ -285,13 +381,13 @@ class _OverviewCard extends StatelessWidget {
               color: color.withAlpha(20),
               shape: BoxShape.circle,
             ),
-            child: Icon(icon, color: color, size: 24),
+            child: Icon(icon, color: color, size: 22),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 14),
           Text(
             value,
             style: GoogleFonts.outfit(
-              fontSize: 24,
+              fontSize: 22,
               fontWeight: FontWeight.bold,
               color: Colors.white,
             ),
@@ -300,7 +396,7 @@ class _OverviewCard extends StatelessWidget {
             title,
             style: const TextStyle(
               color: Colors.white38,
-              fontSize: 13,
+              fontSize: 12,
               fontWeight: FontWeight.w500,
             ),
           ),
@@ -309,6 +405,8 @@ class _OverviewCard extends StatelessWidget {
     );
   }
 }
+
+// ── Quick action ─────────────────────────────────────────────────────────────
 
 class _QuickActionItem extends StatelessWidget {
   final String label;
@@ -329,7 +427,7 @@ class _QuickActionItem extends StatelessWidget {
       onTap: onTap,
       borderRadius: BorderRadius.circular(20),
       child: Container(
-        width: 140,
+        width: 130,
         margin: const EdgeInsets.only(right: 12),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         decoration: BoxDecoration(
@@ -340,7 +438,7 @@ class _QuickActionItem extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(icon, color: color, size: 28),
+            Icon(icon, color: color, size: 26),
             const SizedBox(height: 8),
             Text(
               label,
@@ -358,36 +456,38 @@ class _QuickActionItem extends StatelessWidget {
   }
 }
 
-class _ProductListItem extends StatelessWidget {
-  final dynamic product;
+// ── Product list item ────────────────────────────────────────────────────────
+
+class _ProductListItem extends ConsumerWidget {
+  final Product product;
   const _ProductListItem({required this.product});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(16),
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
         color: const Color(0xFF1E1E1E),
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(16),
         border: Border.all(color: Colors.white.withAlpha(5)),
       ),
       child: Row(
         children: [
           Container(
-            width: 48,
-            height: 48,
+            width: 44,
+            height: 44,
             decoration: BoxDecoration(
               color: Colors.indigoAccent.withAlpha(15),
-              borderRadius: BorderRadius.circular(14),
+              borderRadius: BorderRadius.circular(12),
             ),
             child: const Icon(
               LucideIcons.package,
               color: Colors.indigoAccent,
-              size: 24,
+              size: 22,
             ),
           ),
-          const SizedBox(width: 16),
+          const SizedBox(width: 14),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -397,23 +497,108 @@ class _ProductListItem extends StatelessWidget {
                   style: const TextStyle(
                     color: Colors.white,
                     fontWeight: FontWeight.bold,
-                    fontSize: 15,
+                    fontSize: 14,
                   ),
+                  overflow: TextOverflow.ellipsis,
                 ),
-                Text(
-                  '${product.stock} unidades en stock',
-                  style: const TextStyle(color: Colors.white38, fontSize: 12),
+                Row(
+                  children: [
+                    Text(
+                      '${product.stock} en stock',
+                      style: TextStyle(
+                        color: product.isLowStock
+                            ? Colors.amberAccent
+                            : Colors.white38,
+                        fontSize: 12,
+                      ),
+                    ),
+                    if (product.isLowStock) ...[
+                      const SizedBox(width: 4),
+                      const Icon(
+                        LucideIcons.alertTriangle,
+                        size: 11,
+                        color: Colors.amberAccent,
+                      ),
+                    ],
+                  ],
                 ),
               ],
             ),
           ),
           Text(
-            '\$${product.price}',
+            '\$${product.price.toStringAsFixed(2)}',
             style: GoogleFonts.outfit(
               color: Colors.white,
               fontWeight: FontWeight.bold,
-              fontSize: 16,
+              fontSize: 15,
             ),
+          ),
+          const SizedBox(width: 4),
+          PopupMenuButton<String>(
+            icon: const Icon(LucideIcons.moreVertical, size: 16, color: Colors.white38),
+            color: const Color(0xFF2A2A2A),
+            onSelected: (v) {
+              if (v == 'edit') {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => AddProductScreen(
+                      businessType: 'generic',
+                      product: product,
+                    ),
+                  ),
+                );
+              } else if (v == 'delete') {
+                showDialog(
+                  context: context,
+                  builder: (_) => AlertDialog(
+                    backgroundColor: const Color(0xFF1A1A1A),
+                    title: const Text('Eliminar producto'),
+                    content: Text('¿Eliminar "${product.name}"?'),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.pop(context),
+                        child: const Text('Cancelar'),
+                      ),
+                      FilledButton(
+                        style: FilledButton.styleFrom(
+                          backgroundColor: Colors.redAccent,
+                        ),
+                        onPressed: () {
+                          ref
+                              .read(productsProvider.notifier)
+                              .deleteProduct(product.id);
+                          Navigator.pop(context);
+                        },
+                        child: const Text('Eliminar'),
+                      ),
+                    ],
+                  ),
+                );
+              }
+            },
+            itemBuilder: (_) => [
+              const PopupMenuItem(
+                value: 'edit',
+                child: Row(
+                  children: [
+                    Icon(LucideIcons.pencil, size: 15),
+                    SizedBox(width: 8),
+                    Text('Editar'),
+                  ],
+                ),
+              ),
+              const PopupMenuItem(
+                value: 'delete',
+                child: Row(
+                  children: [
+                    Icon(LucideIcons.trash2, size: 15, color: Colors.redAccent),
+                    SizedBox(width: 8),
+                    Text('Eliminar', style: TextStyle(color: Colors.redAccent)),
+                  ],
+                ),
+              ),
+            ],
           ),
         ],
       ),

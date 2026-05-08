@@ -10,10 +10,7 @@ class CartNotifier extends StateNotifier<List<SaleItem>> {
   CartNotifier() : super([]);
 
   void addToCart(Product product, {List<String>? selectedVariants}) {
-    final existingIndex = state.indexWhere(
-      (item) => item.productId == product.id,
-    );
-
+    final existingIndex = state.indexWhere((item) => item.productId == product.id);
     if (existingIndex >= 0) {
       state = [
         for (int i = 0; i < state.length; i++)
@@ -24,7 +21,7 @@ class CartNotifier extends StateNotifier<List<SaleItem>> {
               ..quantity = state[i].quantity + 1
               ..unitPrice = state[i].unitPrice
               ..totalPrice = (state[i].quantity + 1) * state[i].unitPrice
-              ..selectedVariants = selectedVariants ?? []
+              ..selectedVariants = state[i].selectedVariants
           else
             state[i],
       ];
@@ -40,6 +37,46 @@ class CartNotifier extends StateNotifier<List<SaleItem>> {
           ..selectedVariants = selectedVariants ?? [],
       ];
     }
+  }
+
+  void increaseQuantity(int productId) {
+    final idx = state.indexWhere((i) => i.productId == productId);
+    if (idx < 0) return;
+    state = [
+      for (int i = 0; i < state.length; i++)
+        if (i == idx)
+          SaleItem()
+            ..productId = state[i].productId
+            ..productName = state[i].productName
+            ..quantity = state[i].quantity + 1
+            ..unitPrice = state[i].unitPrice
+            ..totalPrice = (state[i].quantity + 1) * state[i].unitPrice
+            ..selectedVariants = state[i].selectedVariants
+        else
+          state[i],
+    ];
+  }
+
+  void decreaseQuantity(int productId) {
+    final idx = state.indexWhere((i) => i.productId == productId);
+    if (idx < 0) return;
+    if (state[idx].quantity <= 1) {
+      removeFromCart(productId);
+      return;
+    }
+    state = [
+      for (int i = 0; i < state.length; i++)
+        if (i == idx)
+          SaleItem()
+            ..productId = state[i].productId
+            ..productName = state[i].productName
+            ..quantity = state[i].quantity - 1
+            ..unitPrice = state[i].unitPrice
+            ..totalPrice = (state[i].quantity - 1) * state[i].unitPrice
+            ..selectedVariants = state[i].selectedVariants
+        else
+          state[i],
+    ];
   }
 
   void removeFromCart(int productId) {

@@ -8,7 +8,8 @@ import 'package:inventario_app/widgets/barcode_scanner_button.dart';
 
 class AddProductScreen extends ConsumerStatefulWidget {
   final String businessType;
-  const AddProductScreen({super.key, required this.businessType});
+  final Product? product; // non-null when editing
+  const AddProductScreen({super.key, required this.businessType, this.product});
 
   @override
   ConsumerState<AddProductScreen> createState() => _AddProductScreenState();
@@ -16,18 +17,54 @@ class AddProductScreen extends ConsumerStatefulWidget {
 
 class _AddProductScreenState extends ConsumerState<AddProductScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _nameController = TextEditingController();
-  final _priceController = TextEditingController();
-  final _costController = TextEditingController();
-  final _stockController = TextEditingController();
-  final _barcodeController = TextEditingController();
-  final List<String> _variants = [];
-  final _variantController = TextEditingController();
+  late final TextEditingController _nameController;
+  late final TextEditingController _priceController;
+  late final TextEditingController _costController;
+  late final TextEditingController _stockController;
+  late final TextEditingController _barcodeController;
+  late final TextEditingController _variantController;
+  late List<String> _variants;
+
+  bool _isSaving = false;
+
+  @override
+  void initState() {
+    super.initState();
+    final p = widget.product;
+    _nameController = TextEditingController(text: p?.name ?? '');
+    _priceController = TextEditingController(
+      text: p != null ? p.price.toString() : '',
+    );
+    _costController = TextEditingController(
+      text: p != null ? p.costPrice.toString() : '',
+    );
+    _stockController = TextEditingController(
+      text: p != null ? p.stock.toString() : '',
+    );
+    _barcodeController = TextEditingController(text: p?.barcode ?? '');
+    _variantController = TextEditingController();
+    _variants = List.from(p?.variants ?? []);
+  }
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _priceController.dispose();
+    _costController.dispose();
+    _stockController.dispose();
+    _barcodeController.dispose();
+    _variantController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
+    final isEditing = widget.product != null;
+
     return Scaffold(
-      appBar: AppBar(title: const Text('Nuevo Producto')),
+      appBar: AppBar(
+        title: Text(isEditing ? 'Editar Producto' : 'Nuevo Producto'),
+      ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(24),
         child: Form(
@@ -35,19 +72,21 @@ class _AddProductScreenState extends ConsumerState<AddProductScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _buildSectionTitle('Información General'),
+              _sectionTitle('Información General'),
               const SizedBox(height: 16),
-              _buildTextField(
+              _buildField(
                 controller: _nameController,
                 label: 'Nombre del Producto',
                 icon: LucideIcons.tag,
-                validator: (v) => v!.isEmpty ? 'Requerido' : null,
+                validator: (v) =>
+                    (v == null || v.trim().isEmpty) ? 'El nombre es requerido' : null,
+                capitalization: TextCapitalization.sentences,
               ),
               const SizedBox(height: 16),
               Row(
                 children: [
                   Expanded(
-                    child: _buildTextField(
+                    child: _buildField(
                       controller: _barcodeController,
                       label: 'Código de Barras',
                       icon: LucideIcons.scan,
@@ -64,63 +103,91 @@ class _AddProductScreenState extends ConsumerState<AddProductScreen> {
               Row(
                 children: [
                   Expanded(
-                    child: _buildTextField(
+                    child: _buildField(
                       controller: _priceController,
-                      label: 'Precio Venta',
+                      label: 'Precio de Venta',
                       icon: LucideIcons.dollarSign,
-                      keyboardType: TextInputType.number,
+                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                      validator: _validatePositiveNumber,
                     ),
                   ),
                   const SizedBox(width: 16),
                   Expanded(
-                    child: _buildTextField(
+                    child: _buildField(
                       controller: _costController,
-                      label: 'Precio Costo',
+                      label: 'Precio de Costo',
                       icon: LucideIcons.wallet,
-                      keyboardType: TextInputType.number,
+                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                      validator: _validatePositiveNumber,
                     ),
                   ),
                 ],
               ),
               const SizedBox(height: 16),
-              _buildTextField(
+              _buildField(
                 controller: _stockController,
                 label: 'Stock Inicial',
                 icon: LucideIcons.package,
                 keyboardType: TextInputType.number,
+                validator: _validateStock,
               ),
               const SizedBox(height: 32),
-              _buildSectionTitle(
+              _sectionTitle(
                 widget.businessType == 'retail'
                     ? 'Tallas / Colores'
                     : 'Ingredientes / Opciones',
               ),
               const SizedBox(height: 16),
-              _buildVariantInput(),
-              const SizedBox(height: 16),
-              Wrap(
-                spacing: 8,
-                children: _variants
-                    .map(
-                      (v) => Chip(
-                        label: Text(v),
-                        onDeleted: () => setState(() => _variants.remove(v)),
-                        backgroundColor: Colors.indigoAccent.withAlpha(20),
-                        labelStyle: const TextStyle(color: Colors.indigoAccent),
-                      ),
-                    )
-                    .toList(),
+              Row(
+                children: [
+                  Expanded(
+                    child: _buildField(
+                      controller: _variantController,
+                      label: widget.businessType == 'retail'
+                          ? 'Ej: XL, Rojo'
+                          : 'Ej: Sin Cebolla',
+                      icon: LucideIcons.plus,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  IconButton.filledTonal(
+                    onPressed: _addVariant,
+                    icon: const Icon(LucideIcons.plus),
+                  ),
+                ],
               ),
+              if (_variants.isNotEmpty) ...[
+                const SizedBox(height: 12),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 4,
+                  children: _variants
+                      .map(
+                        (v) => Chip(
+                          label: Text(v),
+                          onDeleted: () => setState(() => _variants.remove(v)),
+                          backgroundColor: Colors.indigoAccent.withAlpha(20),
+                          labelStyle: const TextStyle(color: Colors.indigoAccent),
+                        ),
+                      )
+                      .toList(),
+                ),
+              ],
               const SizedBox(height: 48),
               SizedBox(
                 width: double.infinity,
                 height: 56,
                 child: FilledButton(
-                  onPressed: _saveProduct,
-                  child: const Text(
-                    'Guardar Producto',
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                  ),
+                  onPressed: _isSaving ? null : _save,
+                  child: _isSaving
+                      ? const CircularProgressIndicator(color: Colors.white)
+                      : Text(
+                          isEditing ? 'Guardar Cambios' : 'Guardar Producto',
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
                 ),
               ),
             ],
@@ -130,24 +197,26 @@ class _AddProductScreenState extends ConsumerState<AddProductScreen> {
     );
   }
 
-  Widget _buildSectionTitle(String title) {
+  Widget _sectionTitle(String title) {
     return Text(
       title,
       style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.bold),
     );
   }
 
-  Widget _buildTextField({
+  Widget _buildField({
     required TextEditingController controller,
     required String label,
     required IconData icon,
     TextInputType? keyboardType,
     String? Function(String?)? validator,
+    TextCapitalization capitalization = TextCapitalization.none,
   }) {
     return TextFormField(
       controller: controller,
       keyboardType: keyboardType,
       validator: validator,
+      textCapitalization: capitalization,
       decoration: InputDecoration(
         labelText: label,
         prefixIcon: Icon(icon, size: 20, color: Colors.indigoAccent),
@@ -158,52 +227,56 @@ class _AddProductScreenState extends ConsumerState<AddProductScreen> {
     );
   }
 
-  Widget _buildVariantInput() {
-    return Row(
-      children: [
-        Expanded(
-          child: _buildTextField(
-            controller: _variantController,
-            label: widget.businessType == 'retail'
-                ? 'Ej: XL, Rojo'
-                : 'Ej: Sin Cebolla',
-            icon: LucideIcons.plus,
-          ),
-        ),
-        const SizedBox(width: 12),
-        IconButton.filledTonal(
-          onPressed: () {
-            if (_variantController.text.isNotEmpty) {
-              setState(() {
-                _variants.add(_variantController.text);
-                _variantController.clear();
-              });
-            }
-          },
-          icon: const Icon(LucideIcons.plus),
-        ),
-      ],
-    );
+  String? _validatePositiveNumber(String? v) {
+    if (v == null || v.trim().isEmpty) return 'Requerido';
+    final n = double.tryParse(v.trim());
+    if (n == null) return 'Número inválido';
+    if (n < 0) return 'Debe ser positivo';
+    return null;
   }
 
-  void _saveProduct() async {
-    if (_formKey.currentState!.validate()) {
-      final product = Product()
-        ..name = _nameController.text
-        ..price = double.tryParse(_priceController.text) ?? 0.0
-        ..costPrice = double.tryParse(_costController.text) ?? 0.0
-        ..stock = int.tryParse(_stockController.text) ?? 0
-        ..variants = _variants
-        ..category = 'General'
-        ..barcode = _barcodeController.text.isEmpty
-            ? null
-            : _barcodeController.text
-        ..sku = 'SKU-${DateTime.now().millisecondsSinceEpoch}'
-        ..createdAt = DateTime.now()
-        ..updatedAt = DateTime.now();
+  String? _validateStock(String? v) {
+    if (v == null || v.trim().isEmpty) return 'Requerido';
+    final n = int.tryParse(v.trim());
+    if (n == null) return 'Número entero requerido';
+    if (n < 0) return 'Debe ser 0 o más';
+    return null;
+  }
 
-      await ref.read(productsProvider.notifier).addProduct(product);
-      if (mounted) Navigator.pop(context);
+  void _addVariant() {
+    final text = _variantController.text.trim();
+    if (text.isNotEmpty && !_variants.contains(text)) {
+      setState(() {
+        _variants.add(text);
+        _variantController.clear();
+      });
     }
+  }
+
+  Future<void> _save() async {
+    if (!_formKey.currentState!.validate()) return;
+
+    setState(() => _isSaving = true);
+
+    final isEditing = widget.product != null;
+    final product = (widget.product ?? Product())
+      ..name = _nameController.text.trim()
+      ..price = double.parse(_priceController.text.trim())
+      ..costPrice = double.parse(_costController.text.trim())
+      ..stock = int.parse(_stockController.text.trim())
+      ..variants = _variants
+      ..category = 'General'
+      ..barcode = _barcodeController.text.trim().isEmpty
+          ? null
+          : _barcodeController.text.trim()
+      ..sku = isEditing
+          ? (widget.product!.sku)
+          : 'SKU-${DateTime.now().millisecondsSinceEpoch}'
+      ..createdAt = isEditing ? widget.product!.createdAt : DateTime.now()
+      ..updatedAt = DateTime.now();
+
+    await ref.read(productsProvider.notifier).addProduct(product);
+
+    if (mounted) Navigator.pop(context);
   }
 }
