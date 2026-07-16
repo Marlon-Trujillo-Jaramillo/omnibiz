@@ -1,0 +1,21 @@
+// Design System barrel — import this single file in feature screens
+export 'tokens/omni_colors.dart';
+export 'tokens/omni_spacing.dart';
+export 'tokens/omni_radius.dart';
+export 'tokens/omni_typography.dart';
+export 'tokens/omni_breakpoints.dart';
+export 'theme/omni_theme.dart';
+export 'theme/omni_theme_extensions.dart';
+export 'components/atoms/omni_button.dart';
+export 'components/atoms/omni_text_field.dart';
+export 'components/atoms/omni_badge.dart';
+export 'components/atoms/omni_avatar.dart';
+export 'components/atoms/omni_chip.dart';
+export 'components/atoms/omni_drag_handle.dart';
+export 'components/atoms/omni_skeleton.dart';
+export 'components/molecules/omni_search_bar.dart';
+export 'components/molecules/omni_stat_card.dart';
+export 'components/molecules/omni_empty_state.dart';
+export 'components/molecules/omni_error_state.dart';
+export 'components/molecules/omni_confirm_dialog.dart';
+export 'components/molecules/omni_loading_overlay.dart';
