@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:lucide_icons/lucide_icons.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:inventario_app/core/design_system/design_system.dart';
 import 'package:inventario_app/core/utils/currency_formatter.dart';
 import 'package:inventario_app/features/customers/presentation/providers/customers_notifier.dart';
