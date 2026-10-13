@@ -32,11 +32,8 @@ class CategoriesScreen extends ConsumerWidget {
     final categoriesAsync = ref.watch(categoriesProvider);
 
     return Scaffold(
-      backgroundColor: OmniColors.bg,
       appBar: AppBar(
-        backgroundColor: OmniColors.bg,
-        elevation: 0,
-        title: Text('Categorías', style: OmniTypography.headingMd),
+        title: const Text('Categorías'),
         actions: [
           Padding(
             padding: const EdgeInsets.only(right: OmniSpacing.base),
@@ -50,8 +47,11 @@ class CategoriesScreen extends ConsumerWidget {
         ],
       ),
       body: categoriesAsync.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => Center(child: Text('Error: $e')),
+        loading: () => const OmniSkeletonList(count: 5),
+        error: (_, __) => OmniErrorState(
+          message: 'No se pudo cargar la lista.',
+          onRetry: () => ref.invalidate(categoriesProvider),
+        ),
         data: (categories) => categories.isEmpty
             ? OmniEmptyState(
                 icon: LucideIcons.tag,
@@ -67,14 +67,8 @@ class CategoriesScreen extends ConsumerWidget {
 
   static void _openSheet(
       BuildContext context, WidgetRef ref, CategoryEntity? existing) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: OmniColors.bgModal,
-      shape: const RoundedRectangleBorder(
-        borderRadius:
-            BorderRadius.vertical(top: Radius.circular(OmniRadius.xl)),
-      ),
+    showOmniSheet(
+      context,
       builder: (_) => _CategorySheet(existing: existing),
     );
   }
@@ -103,26 +97,27 @@ class _CategoryTile extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: OmniSpacing.base,
-        vertical: OmniSpacing.md,
-      ),
-      decoration: BoxDecoration(
-        color: OmniColors.bgSurface,
-        borderRadius: OmniRadius.mdAll,
-        border: Border.all(color: OmniColors.borderSubtle),
-      ),
+    final count = ref.watch(productsProvider.select((a) =>
+        a.valueOrNull?.where((p) => p.category == category.name).length ?? 0));
+    return OmniCard(
+      onTap: () => CategoriesScreen._openSheet(context, ref, category),
+      padding: const EdgeInsets.fromLTRB(
+          OmniSpacing.md, OmniSpacing.md, OmniSpacing.xs, OmniSpacing.md),
       child: Row(
         children: [
-          OmniIconAvatar(
-            icon: _iconFor(category.icon),
-            color: OmniColors.primary,
-            size: 40,
-          ),
+          OmniIconAvatar(icon: _iconFor(category.icon)),
           const SizedBox(width: OmniSpacing.md),
           Expanded(
-            child: Text(category.name, style: OmniTypography.bodyMd),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(category.name,
+                    style: context.text.bodyMd
+                        .copyWith(fontWeight: FontWeight.w600)),
+                Text('$count producto${count == 1 ? '' : 's'}',
+                    style: context.text.caption.tabular),
+              ],
+            ),
           ),
           _TileActions(category: category),
         ],
@@ -141,13 +136,14 @@ class _TileActions extends ConsumerWidget {
       mainAxisSize: MainAxisSize.min,
       children: [
         IconButton(
-          icon: const Icon(LucideIcons.pencil,
-              size: 18, color: OmniColors.textSecondary),
+          tooltip: 'Editar',
+          icon: const Icon(LucideIcons.pencil, size: OmniSizes.iconSm + 2),
           onPressed: () => CategoriesScreen._openSheet(context, ref, category),
         ),
         IconButton(
-          icon: const Icon(LucideIcons.trash2,
-              size: 18, color: OmniColors.danger),
+          tooltip: 'Eliminar',
+          icon: Icon(LucideIcons.trash2,
+              size: OmniSizes.iconSm + 2, color: context.colors.danger),
           onPressed: () => _confirmDelete(context, ref),
         ),
       ],
@@ -197,44 +193,39 @@ class _CategorySheetState extends ConsumerState<_CategorySheet> {
     super.dispose();
   }
 
-  Future<void> _save() async {
+  Future<void> _save(int storeId) async {
     final name = _nameCtrl.text.trim();
     if (name.isEmpty) return;
     setState(() => _loading = true);
-
-    await ref.read(categoriesProvider.notifier).add(
-      CategoryEntity(
-        id:      _isEdit ? widget.existing!.id : 0,
-        name:    name,
-        icon:    _selectedIcon,
-        storeId: widget.existing?.storeId ?? ref.read(currentStoreProvider) ?? 0,
-      ),
-    );
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      await ref.read(categoriesProvider.notifier).add(
+        CategoryEntity(
+          id:      _isEdit ? widget.existing!.id : 0,
+          name:    name,
+          icon:    _selectedIcon,
+          storeId: storeId,
+        ),
+      );
+    } catch (_) {
+      // Antes el botón quedaba cargando para siempre si fallaba el guardado.
+      if (mounted) setState(() => _loading = false);
+      messenger.showOmni('No se pudo guardar la categoría.',
+          tone: OmniTone.danger);
+      return;
+    }
     if (mounted) Navigator.pop(context);
   }
 
   @override
   Widget build(BuildContext context) {
-    return OmniResponsiveCenter(
-      maxWidth: OmniBreakpoints.tablet,
-      child: Padding(
-        padding: EdgeInsets.only(
-          left: OmniSpacing.xl,
-          right: OmniSpacing.xl,
-          top: OmniSpacing.xl,
-          bottom: OmniSpacing.xxl + MediaQuery.viewInsetsOf(context).bottom,
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const OmniDragHandle(),
-            const SizedBox(height: OmniSpacing.base),
-            Text(
-              _isEdit ? 'Editar categoría' : 'Nueva categoría',
-              style: OmniTypography.headingLg,
-            ),
-            const SizedBox(height: OmniSpacing.xl),
+    // Sin sucursal cargada no se puede guardar (nunca storeId 0).
+    final storeId = widget.existing?.storeId ?? ref.watch(currentStoreProvider);
+    return OmniSheetBody(
+      title: _isEdit ? 'Editar categoría' : 'Nueva categoría',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
             OmniTextField(
               controller: _nameCtrl,
               label: 'Nombre',
@@ -242,7 +233,7 @@ class _CategorySheetState extends ConsumerState<_CategorySheet> {
               textInputAction: TextInputAction.done,
             ),
             const SizedBox(height: OmniSpacing.xl),
-            Text('Ícono', style: OmniTypography.headingMd),
+            Text('ÍCONO', style: context.text.overline),
             const SizedBox(height: OmniSpacing.md),
             _IconPicker(
               selected: _selectedIcon,
@@ -251,14 +242,13 @@ class _CategorySheetState extends ConsumerState<_CategorySheet> {
             const SizedBox(height: OmniSpacing.xxl),
             OmniButton(
               label: _isEdit ? 'Guardar cambios' : 'Crear categoría',
-              onPressed: _loading ? null : _save,
+              onPressed: _loading || storeId == null ? null : () => _save(storeId),
               loading: _loading,
               fullWidth: true,
               size: OmniButtonSize.lg,
               icon: _isEdit ? LucideIcons.save : LucideIcons.plus,
             ),
-          ],
-        ),
+        ],
       ),
     );
   }
@@ -301,23 +291,32 @@ class _IconOption extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 150),
-        padding: const EdgeInsets.all(OmniSpacing.md),
-        decoration: BoxDecoration(
-          color: selected ? OmniColors.primaryBg : OmniColors.bgSurface,
-          borderRadius: OmniRadius.mdAll,
-          border: Border.all(
-            color: selected ? OmniColors.primary : OmniColors.borderSubtle,
-            width: selected ? 1.5 : 1,
+    final c = context.colors;
+    return Semantics(
+      selected: selected,
+      button: true,
+      label: iconKey,
+      child: OmniPressable(
+        child: GestureDetector(
+          onTap: onTap,
+          child: AnimatedContainer(
+            duration: OmniMotion.base,
+            width: OmniSizes.controlLg,
+            height: OmniSizes.controlLg,
+            decoration: BoxDecoration(
+              color: selected ? c.primaryBg : c.bgRaised,
+              borderRadius: OmniRadius.mdAll,
+              border: Border.all(
+                color: selected ? c.primary : c.borderSubtle,
+                width: selected ? OmniSizes.focusRing : OmniSizes.hairline,
+              ),
+            ),
+            child: Icon(
+              iconData,
+              size: OmniSizes.iconLg,
+              color: selected ? c.primaryText : c.textSecondary,
+            ),
           ),
-        ),
-        child: Icon(
-          iconData,
-          size: OmniSpacing.xl,
-          color: selected ? OmniColors.primary : OmniColors.textSecondary,
         ),
       ),
     );

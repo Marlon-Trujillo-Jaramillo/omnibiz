@@ -67,26 +67,27 @@ class SembastCustomerRepository implements CustomerRepository {
   }
 
   @override
-  Future<void> updateDebt(int id, double delta) async {
-    AppLogger.i(_tag, 'updateDebt(id=$id, delta=$delta)');
-    try {
-      await _db.transaction((txn) async {
-        final value = await _customers.record(id).get(txn);
-        if (value == null) {
-          AppLogger.w(_tag, 'updateDebt($id) → cliente no encontrado, no-op');
-          return;
-        }
-        final prev    = (value['totalDebt'] as num).toDouble();
-        final newDebt = prev + delta;
-        AppLogger.i(_tag, 'updateDebt($id): $prev + $delta = $newDebt');
-        await _customers.record(id).update(txn, {
-          'totalDebt':       newDebt,
-          'lastTransaction': DateTime.now().toIso8601String(),
-        });
-      });
-    } catch (e, st) {
-      AppLogger.e(_tag, 'updateDebt(id=$id) falló', e, st);
-      rethrow;
+  Future<void> registerPayment(int id, int amount) async {
+    AppLogger.i(_tag, 'registerPayment(id=$id, amount=$amount)');
+    if (amount <= 0) {
+      throw const InvalidPaymentException('El monto debe ser mayor a cero');
     }
+    await _db.transaction((txn) async {
+      final value = await _customers.record(id).get(txn);
+      if (value == null) {
+        throw const InvalidPaymentException('Cliente no encontrado');
+      }
+      // Centavos enteros: comparación y resta exactas, sin tolerancias.
+      final debt = value['totalDebt'] as int;
+      if (amount > debt) {
+        throw const InvalidPaymentException('El monto supera la deuda del cliente');
+      }
+      final newDebt = debt - amount;
+      AppLogger.i(_tag, 'registerPayment($id): $debt - $amount = $newDebt');
+      await _customers.record(id).update(txn, {
+        'totalDebt':       newDebt,
+        'lastTransaction': DateTime.now().toIso8601String(),
+      });
+    });
   }
 }

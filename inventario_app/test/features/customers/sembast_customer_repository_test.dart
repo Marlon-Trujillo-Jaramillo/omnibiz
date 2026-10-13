@@ -2,6 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:sembast/sembast_memory.dart';
 import 'package:inventario_app/features/customers/data/repositories/sembast_customer_repository.dart';
 import 'package:inventario_app/features/customers/domain/entities/customer_entity.dart';
+import 'package:inventario_app/features/customers/domain/repositories/customer_repository.dart';
 
 int _dbCounter = 0;
 String _dbName() => 'customers_${_dbCounter++}.db';
@@ -9,7 +10,7 @@ String _dbName() => 'customers_${_dbCounter++}.db';
 CustomerEntity _entity({
   int id = 0,
   String name = 'Ana',
-  double totalDebt = 0,
+  int totalDebt = 0,
 }) =>
     CustomerEntity(
       id:        id,
@@ -78,27 +79,54 @@ void main() {
     });
   });
 
-  group('updateDebt', () {
-    test('incrementa la deuda', () async {
-      await repo.save(_entity(name: 'Luis', totalDebt: 10000));
-      final id = (await repo.getAll(storeId: 0)).first.id;
+  group('registerPayment', () {
+    Future<int> withDebt(int debt) async {
+      await repo.save(_entity(name: 'Pedro', totalDebt: debt));
+      return (await repo.getAll(storeId: 0)).first.id;
+    }
 
-      await repo.updateDebt(id, 5000);
-      final updated = await repo.getById(id);
-      expect(updated?.totalDebt, 15000);
+    test('abono parcial descuenta la deuda', () async {
+      final id = await withDebt(10000);
+
+      await repo.registerPayment(id, 4000);
+      expect((await repo.getById(id))?.totalDebt, 6000);
     });
 
-    test('actualiza lastTransaction', () async {
-      await repo.save(_entity(name: 'María'));
-      final id = (await repo.getAll(storeId: 0)).first.id;
+    test('monto mayor que la deuda → InvalidPaymentException sin cambios', () async {
+      final id = await withDebt(10000);
 
-      await repo.updateDebt(id, 1000);
-      final updated = await repo.getById(id);
-      expect(updated?.lastTransaction, isNotNull);
+      await expectLater(
+        repo.registerPayment(id, 10001),
+        throwsA(isA<InvalidPaymentException>()),
+      );
+      expect((await repo.getById(id))?.totalDebt, 10000);
     });
 
-    test('no falla con id inexistente', () async {
-      await expectLater(repo.updateDebt(999, 1000), completes);
+    test('monto <= 0 → InvalidPaymentException', () async {
+      final id = await withDebt(10000);
+
+      await expectLater(repo.registerPayment(id, 0), throwsA(isA<InvalidPaymentException>()));
+      await expectLater(repo.registerPayment(id, -5), throwsA(isA<InvalidPaymentException>()));
+      expect((await repo.getById(id))?.totalDebt, 10000);
+    });
+
+    test('pagar la deuda completa la deja exactamente en 0', () async {
+      // 0.10 + 0.20 en centavos: en double quedaría 0.30000000000000004.
+      final id = await withDebt(10 + 20);
+
+      await repo.registerPayment(id, 30);
+      expect((await repo.getById(id))?.totalDebt, 0);
+      expect((await repo.getById(id))?.hasDebt, isFalse);
+    });
+
+    test('un centavo de más se rechaza (sin tolerancias)', () async {
+      final id = await withDebt(1001);
+
+      await expectLater(
+        repo.registerPayment(id, 1002),
+        throwsA(isA<InvalidPaymentException>()),
+      );
+      expect((await repo.getById(id))?.totalDebt, 1001);
     });
   });
 }

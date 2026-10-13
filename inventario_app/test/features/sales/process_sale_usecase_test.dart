@@ -1,207 +1,303 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:sembast/sembast_memory.dart';
 import 'package:inventario_app/core/error/failures.dart';
 import 'package:inventario_app/core/utils/app_result.dart';
+import 'package:inventario_app/features/customers/data/repositories/sembast_customer_repository.dart';
 import 'package:inventario_app/features/customers/domain/entities/customer_entity.dart';
-import 'package:inventario_app/features/customers/domain/repositories/customer_repository.dart';
+import 'package:inventario_app/features/inventory/data/repositories/sembast_product_repository.dart';
 import 'package:inventario_app/features/inventory/domain/entities/product_entity.dart';
-import 'package:inventario_app/features/inventory/domain/repositories/product_repository.dart';
+import 'package:inventario_app/features/sales/data/repositories/sembast_sale_repository.dart';
 import 'package:inventario_app/features/sales/domain/entities/sale_entity.dart';
 import 'package:inventario_app/features/sales/domain/repositories/sale_repository.dart';
 import 'package:inventario_app/features/sales/domain/usecases/process_sale_usecase.dart';
 
-// ── Fakes ─────────────────────────────────────────────────────────────────────
+// Se prueba contra sembast en memoria (no fakes) porque lo que importa es la
+// atomicidad real de la transacción.
 
-class FakeProductRepository implements ProductRepository {
-  final Map<int, ProductEntity> _products;
-  final Map<int, int> stockUpdates = {};
+const _store = 1;
+const _otherStore = 2;
 
-  FakeProductRepository(List<ProductEntity> products)
-      : _products = {for (final p in products) p.id: p};
+int _dbCounter = 0;
 
-  @override Future<ProductEntity?> getById(int id) async => _products[id];
-
-  @override Future<void> updateStock(int id, int newStock) async {
-    stockUpdates[id] = newStock;
-    final p = _products[id]!;
-    _products[id] = p.copyWith(stock: newStock);
-  }
-
-  @override Future<List<ProductEntity>> getAll({int storeId = 0}) async => _products.values.toList();
-  @override Future<ProductEntity?> getByBarcode(String b, {int storeId = 0}) async => null;
-  @override Future<ProductEntity?> getBySku(String s, {int storeId = 0}) async => null;
-  @override Future<void> save(ProductEntity p) async {}
-  @override Future<void> delete(int id) async {}
-  @override Stream<List<ProductEntity>> watchAll({int storeId = 0}) => const Stream.empty();
-  @override Future<List<CategoryEntity>> getAllCategories({int storeId = 0}) async => [];
-  @override Future<void> saveCategory(CategoryEntity c) async {}
-  @override Future<void> deleteCategory(int id) async {}
-}
-
-class FakeSaleRepository implements SaleRepository {
-  final List<SaleEntity> saved = [];
-
-  @override Future<void> save(SaleEntity sale) async => saved.add(sale);
-  @override Future<List<SaleEntity>> getAll({int storeId = 0}) async => saved;
-  @override Future<List<SaleEntity>> getByDateRange(DateTime f, DateTime t, {int storeId = 0}) async => [];
-  @override Stream<List<SaleEntity>> watchAll({int storeId = 0}) => const Stream.empty();
-}
-
-class FakeCustomerRepository implements CustomerRepository {
-  final Map<int, CustomerEntity> _customers;
-  final Map<int, double> debtDeltas = {};
-
-  FakeCustomerRepository(List<CustomerEntity> customers)
-      : _customers = {for (final c in customers) c.id: c};
-
-  @override Future<CustomerEntity?> getById(int id) async => _customers[id];
-
-  @override Future<void> updateDebt(int id, double delta) async {
-    debtDeltas[id] = (debtDeltas[id] ?? 0) + delta;
-  }
-
-  @override Future<List<CustomerEntity>> getAll({int storeId = 0}) async => _customers.values.toList();
-  @override Future<void> save(CustomerEntity c) async {}
-  @override Future<void> delete(int id) async {}
-}
-
-// ── Helpers ───────────────────────────────────────────────────────────────────
-
-ProductEntity _product({int id = 1, int stock = 10}) => ProductEntity(
-      id:        id,
-      name:      'Producto $id',
+ProductEntity _product({int stock = 10, int storeId = _store}) => ProductEntity(
+      id:        0,
+      name:      'Producto',
       category:  'General',
       price:     5000,
       costPrice: 3000,
       stock:     stock,
-      sku:       'SKU-$id',
+      sku:       'SKU',
       variants:  [],
       createdAt: DateTime(2024),
       updatedAt: DateTime(2024),
-      storeId:   0,
+      storeId:   storeId,
     );
 
-SaleItemEntity _item({int productId = 1, int quantity = 1}) => SaleItemEntity(
+SaleItemEntity _item({int productId = 1, int quantity = 1, String name = 'Producto 1'}) =>
+    SaleItemEntity(
       productId:        productId,
-      productName:      'Producto $productId',
+      productName:      name,
       quantity:         quantity,
       unitPrice:        5000,
-      totalPrice:       5000.0 * quantity,
+      totalPrice:       5000 * quantity,
       selectedVariants: [],
     );
 
 SaleEntity _sale({
   List<SaleItemEntity>? items,
-  String paymentMethod = 'Efectivo',
+  String paymentMethod = PaymentMethods.cash,
   int? customerId,
+  int totalAmount = 5000,
+  int storeId = _store,
 }) =>
     SaleEntity(
       id:              0,
       items:           items ?? [_item()],
-      totalAmount:     5000,
+      totalAmount:     totalAmount,
       taxAmount:       0,
       discountAmount:  0,
       paymentMethod:   paymentMethod,
       businessContext: 'generic',
       createdAt:       DateTime.now(),
-      storeId:         0,
+      storeId:         storeId,
+      currencyCode:    'COP',
       customerId:      customerId,
     );
 
-// ── Tests ─────────────────────────────────────────────────────────────────────
+/// Falla al confirmar con un error no previsto (p. ej. disco lleno).
+class _ThrowingSaleRepository implements SaleRepository {
+  @override Future<SaleEntity> commitSale(SaleEntity sale) async => throw StateError('disco lleno');
+  @override Future<List<SaleEntity>> getByDateRange(DateTime f, DateTime t, {required int storeId}) async => [];
+  @override Future<List<SaleEntity>> getPage({required int storeId, required int limit, DateTime? before, DateTime? from, String? paymentMethod}) async => [];
+}
+
+Future<int> _seedPriced(SembastProductRepository repo, int priceCents) async {
+  await repo.save(_product().copyWith(price: priceCents));
+  return (await repo.getAll(storeId: _store)).last.id;
+}
 
 void main() {
-  late FakeProductRepository products;
-  late FakeSaleRepository     sales;
-  late FakeCustomerRepository customers;
-  late ProcessSaleUseCase     useCase;
+  late Database db;
+  late String dbName;
+  late SembastProductRepository products;
+  late SembastCustomerRepository customers;
+  late SembastSaleRepository sales;
+  late ProcessSaleUseCase useCase;
 
-  setUp(() {
-    products  = FakeProductRepository([_product(id: 1, stock: 10)]);
-    sales     = FakeSaleRepository();
-    customers = FakeCustomerRepository([
-      CustomerEntity(
-          id: 99, name: 'Juan', totalDebt: 0, createdAt: DateTime(2024), storeId: 0),
-    ]);
-    useCase = ProcessSaleUseCase(
-      saleRepository:     sales,
-      productRepository:  products,
-      customerRepository: customers,
-    );
+  Future<int> stockOf(int id) async => (await products.getById(id))!.stock;
+  Future<int> debtOf(int id) async => (await customers.getById(id))!.totalDebt;
+  Future<List<SaleEntity>> allSales(int storeId) =>
+      sales.getPage(storeId: storeId, limit: 1000);
+
+  setUp(() async {
+    dbName    = 'process_sale_${_dbCounter++}.db';
+    db        = await databaseFactoryMemory.openDatabase(dbName);
+    products  = SembastProductRepository(db);
+    customers = SembastCustomerRepository(db);
+    sales     = SembastSaleRepository(db);
+    useCase   = ProcessSaleUseCase(saleRepository: sales);
+
+    await products.save(_product(stock: 10));                      // id 1
+    await products.save(_product(stock: 1));                       // id 2
+    await products.save(_product(stock: 10, storeId: _otherStore)); // id 3
+    await customers.save(CustomerEntity(
+        id: 0, name: 'Juan', totalDebt: 0, createdAt: DateTime(2024), storeId: _store)); // id 1
+    await customers.save(CustomerEntity(
+        id: 0, name: 'Ana', totalDebt: 0, createdAt: DateTime(2024), storeId: _otherStore)); // id 2
+  });
+
+  tearDown(() async {
+    await db.close();
+    await databaseFactoryMemory.deleteDatabase(dbName);
   });
 
   group('venta exitosa', () {
-    test('guarda la venta y retorna sin failure', () async {
+    test('guarda la venta y retorna el id generado (no #0)', () async {
       final result = await useCase.execute(_sale(items: [_item(quantity: 2)]));
 
       expect(result, isA<AppSuccess<SaleEntity>>());
-      expect(sales.saved, hasLength(1));
+      final saved = result.dataOrNull!;
+      expect(saved.id, greaterThan(0));
+      final all = await allSales(_store);
+      expect(all.single.id, saved.id);
     });
 
     test('descuenta stock correctamente', () async {
       await useCase.execute(_sale(items: [_item(quantity: 3)]));
 
-      expect(products.stockUpdates[1], 7); // 10 - 3
+      expect(await stockOf(1), 7); // 10 - 3
+    });
+
+    test('recalcula el total desde las líneas, ignorando el de la UI', () async {
+      final result = await useCase.execute(
+        _sale(items: [_item(quantity: 2)], totalAmount: 1),
+      );
+
+      expect(result.dataOrNull!.totalAmount, 10000);
+      expect((await allSales(_store)).single.totalAmount, 10000);
+    });
+  });
+
+  group('atomicidad', () {
+    test('si falla la línea 2, la línea 1 no descuenta stock', () async {
+      final result = await useCase.execute(_sale(items: [
+        _item(productId: 1, quantity: 3),
+        _item(productId: 2, quantity: 5, name: 'Producto 2'), // solo hay 1
+      ]));
+
+      expect(result.failureOrNull, isA<StockFailure>());
+      expect(await stockOf(1), 10);
+      expect(await stockOf(2), 1);
+      expect(await allSales(_store), isEmpty);
+    });
+
+    test('líneas duplicadas del mismo producto se suman al validar', () async {
+      // 1 + 1 > stock 1 del producto 2.
+      final result = await useCase.execute(_sale(items: [
+        _item(productId: 2, name: 'Producto 2'),
+        _item(productId: 2, name: 'Producto 2'),
+      ]));
+
+      expect(result.failureOrNull, isA<StockFailure>());
+      expect(await stockOf(2), 1);
+    });
+
+    test('líneas duplicadas válidas descuentan la suma', () async {
+      final result = await useCase.execute(_sale(items: [
+        _item(quantity: 2),
+        _item(quantity: 3),
+      ]));
+
+      expect(result, isA<AppSuccess<SaleEntity>>());
+      expect(await stockOf(1), 5);
+    });
+
+    test('Fiado rechazado no deja deuda escrita', () async {
+      final result = await useCase.execute(_sale(
+        items: [_item(productId: 1), _item(productId: 2, quantity: 9, name: 'Producto 2')],
+        paymentMethod: PaymentMethods.credit,
+        customerId: 1,
+      ));
+
+      expect(result.failureOrNull, isA<StockFailure>());
+      expect(await debtOf(1), 0);
+      expect(await stockOf(1), 10);
+    });
+
+    test('error inesperado al confirmar → DatabaseFailure', () async {
+      final result = await ProcessSaleUseCase(saleRepository: _ThrowingSaleRepository())
+          .execute(_sale());
+
+      expect(result.failureOrNull, isA<DatabaseFailure>());
     });
   });
 
   group('stock insuficiente', () {
     test('retorna StockFailure sin guardar la venta', () async {
-      final result = await useCase.execute(
-        _sale(items: [_item(quantity: 999)]),
-      );
+      final result = await useCase.execute(_sale(items: [_item(quantity: 999)]));
 
-      expect(result, isA<AppFailure<SaleEntity>>());
-      expect((result as AppFailure<SaleEntity>).failure, isA<StockFailure>());
-      expect(sales.saved, isEmpty);
+      expect(result.failureOrNull, isA<StockFailure>());
+      expect(await allSales(_store), isEmpty);
     });
 
     test('mensaje menciona el producto', () async {
-      final result = await useCase.execute(
-        _sale(items: [_item(quantity: 999)]),
-      );
+      final result = await useCase.execute(_sale(items: [_item(quantity: 999)]));
 
-      expect((result as AppFailure<SaleEntity>).failure.message, contains('Producto 1'));
+      expect(result.failureOrNull!.message, contains('Producto 1'));
     });
   });
 
   group('producto no encontrado', () {
     test('retorna NotFoundFailure', () async {
-      final result = await useCase.execute(
-        _sale(items: [_item(productId: 999)]),
-      );
+      final result = await useCase.execute(_sale(items: [_item(productId: 999)]));
 
-      expect(result, isA<AppFailure<SaleEntity>>());
-      expect((result as AppFailure<SaleEntity>).failure, isA<NotFoundFailure>());
+      expect(result.failureOrNull, isA<NotFoundFailure>());
+    });
+  });
+
+  group('sucursal', () {
+    test('producto de otra sucursal → ValidationFailure sin tocar stock', () async {
+      final result = await useCase.execute(_sale(items: [_item(productId: 3)]));
+
+      expect(result.failureOrNull, isA<ValidationFailure>());
+      expect(await stockOf(3), 10);
+    });
+
+    test('storeId 0 → ValidationFailure', () async {
+      final result = await useCase.execute(_sale(storeId: 0));
+
+      expect(result.failureOrNull, isA<ValidationFailure>());
+    });
+
+    test('carrito vacío → ValidationFailure', () async {
+      final result = await useCase.execute(_sale(items: []));
+
+      expect(result.failureOrNull, isA<ValidationFailure>());
     });
   });
 
   group('pago Fiado', () {
     test('suma deuda al cliente', () async {
-      const total = 15000.0;
-      await useCase.execute(
-        SaleEntity(
-          id:              0,
-          items:           [_item()],
-          totalAmount:     total,
-          taxAmount:       0,
-          discountAmount:  0,
-          paymentMethod:   'Fiado',
-          businessContext: 'generic',
-          createdAt:       DateTime.now(),
-          storeId:         0,
-          customerId:      99,
-        ),
-      );
+      await useCase.execute(_sale(
+        items: [_item(quantity: 3)],
+        paymentMethod: PaymentMethods.credit,
+        customerId: 1,
+      ));
 
-      expect(customers.debtDeltas[99], total);
+      expect(await debtOf(1), 15000);
     });
 
-    test('sin customerId no actualiza deuda', () async {
-      await useCase.execute(
-        _sale(paymentMethod: 'Fiado', customerId: null),
+    test('fiados con céntimos + pago completo → deuda exactamente 0', () async {
+      // Precios de USD 0.10 y 0.20 (en double: 0.1 + 0.2 = 0.30000000000000004).
+      final p10 = await _seedPriced(products, 10);
+      final p20 = await _seedPriced(products, 20);
+      for (final pid in [p10, p20, p10]) {
+        final result = await useCase.execute(_sale(
+          items: [
+            SaleItemEntity(
+              productId: pid, productName: 'P$pid', quantity: 1,
+              unitPrice: pid == p10 ? 10 : 20, totalPrice: 0,
+              selectedVariants: const [],
+            ),
+          ],
+          paymentMethod: PaymentMethods.credit,
+          customerId: 1,
+        ));
+        expect(result.isSuccess, isTrue);
+      }
+      expect(await debtOf(1), 40);
+
+      await customers.registerPayment(1, 40);
+      expect(await debtOf(1), 0);
+      expect((await customers.getById(1))!.hasDebt, isFalse);
+    });
+
+    test('sin customerId → ValidationFailure y no se guarda nada', () async {
+      final result = await useCase.execute(
+        _sale(paymentMethod: PaymentMethods.credit, customerId: null),
       );
 
-      expect(customers.debtDeltas, isEmpty);
+      expect(result.failureOrNull, isA<ValidationFailure>());
+      expect(await stockOf(1), 10);
+      expect(await allSales(_store), isEmpty);
+    });
+
+    test('cliente inexistente → ValidationFailure', () async {
+      final result = await useCase.execute(
+        _sale(paymentMethod: PaymentMethods.credit, customerId: 999),
+      );
+
+      expect(result.failureOrNull, isA<ValidationFailure>());
+      expect(await stockOf(1), 10);
+    });
+
+    test('cliente de otra sucursal → ValidationFailure', () async {
+      final result = await useCase.execute(
+        _sale(paymentMethod: PaymentMethods.credit, customerId: 2),
+      );
+
+      expect(result.failureOrNull, isA<ValidationFailure>());
+      expect(await debtOf(2), 0);
     });
   });
 }

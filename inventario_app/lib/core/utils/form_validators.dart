@@ -1,3 +1,5 @@
+import 'money.dart';
+
 abstract final class FormValidators {
   static String? required(String? value, [String fieldName = 'Este campo']) {
     if (value == null || value.trim().isEmpty) {
@@ -6,13 +8,21 @@ abstract final class FormValidators {
     return null;
   }
 
-  static String? positiveNumber(String? value, [String fieldName = 'El valor']) {
+  /// Monto de dinero en el formato que acepta [Money.parse]
+  /// (`1500`, `1500.50`, `9,99`). Con [allowZero] acepta 0 (p. ej. costo).
+  static String? money(
+    String? value, [
+    String fieldName = 'El monto',
+    bool allowZero = false,
+  ]) {
     if (value == null || value.trim().isEmpty) {
       return '$fieldName es obligatorio';
     }
-    final n = double.tryParse(value.trim());
-    if (n == null) return '$fieldName debe ser un número válido';
-    if (n <= 0) return '$fieldName debe ser mayor a 0';
+    final cents = Money.parse(value);
+    if (cents == null) {
+      return '$fieldName debe ser un monto válido (máx. 2 decimales)';
+    }
+    if (!allowZero && cents == 0) return '$fieldName debe ser mayor a 0';
     return null;
   }
 

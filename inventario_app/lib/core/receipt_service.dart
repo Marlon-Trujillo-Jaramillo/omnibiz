@@ -8,7 +8,11 @@ import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 
+import 'package:inventario_app/core/design_system/design_system.dart';
 import 'package:inventario_app/core/globals.dart';
+import 'package:inventario_app/core/utils/app_constants.dart';
+import 'package:inventario_app/core/utils/app_currency.dart';
+import 'package:inventario_app/core/utils/currency_formatter.dart';
 import 'package:inventario_app/features/sales/domain/entities/sale_entity.dart';
 
 abstract final class ReceiptService {
@@ -27,7 +31,7 @@ abstract final class ReceiptService {
       );
     } catch (e) {
       debugPrint('[ReceiptService] Error al generar recibo: $e');
-      _notify('No se pudo generar el recibo', icon: Icons.error_outline);
+      _notify('No se pudo generar el recibo', tone: OmniTone.danger);
     }
   }
 
@@ -42,7 +46,7 @@ abstract final class ReceiptService {
       );
     } catch (e) {
       debugPrint('[ReceiptService] Error al compartir recibo: $e');
-      _notify('No se pudo compartir el recibo', icon: Icons.error_outline);
+      _notify('No se pudo compartir el recibo', tone: OmniTone.danger);
     }
   }
 
@@ -51,6 +55,8 @@ abstract final class ReceiptService {
   static Future<Uint8List> _buildPdfBytes(SaleEntity sale) async {
     final doc     = pw.Document();
     final dateStr = DateFormat('dd/MM/yyyy HH:mm').format(sale.createdAt);
+    // La moneda de la venta, no la configurada hoy en ajustes.
+    final currency = AppCurrency.fromCode(sale.currencyCode);
 
     doc.addPage(
       pw.Page(
@@ -74,6 +80,7 @@ abstract final class ReceiptService {
               pw.Text('Fecha: $dateStr'),
               pw.Text('Ticket: #${sale.id}'),
               pw.Text('Método: ${sale.paymentMethod}'),
+              pw.Text('Moneda: ${currency.code}'),
               pw.SizedBox(height: 10),
               pw.Divider(thickness: 1),
               pw.SizedBox(height: 5),
@@ -100,7 +107,7 @@ abstract final class ReceiptService {
                         ),
                       ),
                       pw.Text(
-                        '\$${item.totalPrice.toStringAsFixed(2)}',
+                        CurrencyFormatter.format(item.totalPrice, currency),
                         style: const pw.TextStyle(fontSize: 10),
                       ),
                     ],
@@ -117,7 +124,7 @@ abstract final class ReceiptService {
                       style: pw.TextStyle(
                           fontWeight: pw.FontWeight.bold, fontSize: 12)),
                   pw.Text(
-                    '\$${sale.totalAmount.toStringAsFixed(2)}',
+                    CurrencyFormatter.format(sale.totalAmount, currency),
                     style: pw.TextStyle(
                         fontWeight: pw.FontWeight.bold, fontSize: 12),
                   ),
@@ -148,7 +155,7 @@ abstract final class ReceiptService {
         ? await getExternalStorageDirectory()
         : await getApplicationDocumentsDirectory();
 
-    final folder = Directory('${base!.path}/OmniBiz');
+    final folder = Directory('${base!.path}/${AppConstants.receiptFolder}');
     await folder.create(recursive: true);
 
     final ts   = DateFormat('yyyyMMdd_HHmmss').format(DateTime.now());
@@ -161,23 +168,12 @@ abstract final class ReceiptService {
 
   static void _notify(
     String message, {
-    IconData icon = Icons.info_outline,
-    Color color   = const Color(0xFF9E9E9E),
+    OmniTone tone = OmniTone.neutral,
   }) {
-    scaffoldMessengerKey.currentState
-      ?..hideCurrentSnackBar()
-      ..showSnackBar(
-        SnackBar(
-          content: Row(
-            children: [
-              Icon(icon, color: color, size: 18),
-              const SizedBox(width: 10),
-              Expanded(child: Text(message)),
-            ],
-          ),
-          duration: const Duration(seconds: 4),
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
+    scaffoldMessengerKey.currentState?.showOmni(
+      message,
+      tone: tone,
+      duration: const Duration(seconds: 4),
+    );
   }
 }

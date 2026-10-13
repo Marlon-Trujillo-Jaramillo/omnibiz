@@ -20,13 +20,23 @@ class CurrencyNotifier extends Notifier<AppCurrency> {
 
   Future<void> _load() async {
     final value = await _storage.read(key: _key);
-    if (value != null) {
-      state = AppCurrency.values.firstWhere(
+    if (value != null) state = _parse(value);
+  }
+
+  /// Moneda guardada, leída fuera de Riverpod (p. ej. en `main` antes de
+  /// abrir la BD, para etiquetar ventas antiguas en la migración).
+  static Future<AppCurrency> readStored() async {
+    try {
+      return _parse(await _storage.read(key: _key));
+    } catch (_) {
+      return AppCurrency.cop;
+    }
+  }
+
+  static AppCurrency _parse(String? value) => AppCurrency.values.firstWhere(
         (c) => c.name == value,
         orElse: () => AppCurrency.cop,
       );
-    }
-  }
 
   Future<void> setCurrency(AppCurrency currency) async {
     state = currency;
@@ -37,9 +47,14 @@ class CurrencyNotifier extends Notifier<AppCurrency> {
 // ── WidgetRef extension ────────────────────────────────────────────────────────
 
 extension MoneyFormat on WidgetRef {
-  String formatMoney(double amount) =>
-      CurrencyFormatter.format(amount, watch(currencyProvider));
+  /// [cents] en centavos (ver `Money`), con la moneda configurada.
+  String formatMoney(int cents) =>
+      CurrencyFormatter.format(cents, watch(currencyProvider));
 
-  String formatMoneyCompact(double amount) =>
-      CurrencyFormatter.compact(amount, watch(currencyProvider));
+  String formatMoneyCompact(int cents) =>
+      CurrencyFormatter.compact(cents, watch(currencyProvider));
+
+  /// Monto de una venta: siempre con la moneda en que se registró.
+  String formatSaleMoney(int cents, String currencyCode) =>
+      CurrencyFormatter.format(cents, AppCurrency.fromCode(currencyCode));
 }

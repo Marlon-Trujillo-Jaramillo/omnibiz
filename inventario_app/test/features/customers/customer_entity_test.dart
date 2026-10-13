@@ -4,7 +4,7 @@ import 'package:inventario_app/features/customers/domain/entities/customer_entit
 CustomerEntity _customer({
   int id = 1,
   String name = 'Ana García',
-  double totalDebt = 0,
+  int totalDebt = 0,
 }) =>
     CustomerEntity(
       id:        id,

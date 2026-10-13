@@ -14,7 +14,8 @@ class Customer {
   final String name;
   final String? phone;
   final String? email;
-  final double totalDebt;
+  /// Centavos.
+  final int totalDebt;
   final DateTime createdAt;
   final DateTime? lastTransaction;
   final int storeId;
@@ -34,7 +35,7 @@ class Customer {
         name: map['name'] as String,
         phone: map['phone'] as String?,
         email: map['email'] as String?,
-        totalDebt: (map['totalDebt'] as num).toDouble(),
+        totalDebt: map['totalDebt'] as int,
         createdAt: DateTime.parse(map['createdAt'] as String),
         lastTransaction: map['lastTransaction'] != null
             ? DateTime.parse(map['lastTransaction'] as String)

@@ -37,38 +37,6 @@ class SembastProductRepository implements ProductRepository {
   }
 
   @override
-  Future<ProductEntity?> getByBarcode(String barcode, {required int storeId}) async {
-    AppLogger.d(_tag, 'getByBarcode($barcode, storeId=$storeId)');
-    final finder = Finder(
-      filter: Filter.and([
-        Filter.equals('barcode', barcode),
-        Filter.equals('storeId', storeId),
-      ]),
-    );
-    final snapshot = await _products.findFirst(_db, finder: finder);
-    if (snapshot == null) AppLogger.w(_tag, 'getByBarcode($barcode) → no encontrado');
-    return snapshot == null
-        ? null
-        : Product.fromMap(snapshot.key, snapshot.value).toEntity();
-  }
-
-  @override
-  Future<ProductEntity?> getBySku(String sku, {required int storeId}) async {
-    AppLogger.d(_tag, 'getBySku($sku, storeId=$storeId)');
-    final finder = Finder(
-      filter: Filter.and([
-        Filter.equals('sku', sku),
-        Filter.equals('storeId', storeId),
-      ]),
-    );
-    final snapshot = await _products.findFirst(_db, finder: finder);
-    if (snapshot == null) AppLogger.w(_tag, 'getBySku($sku) → no encontrado');
-    return snapshot == null
-        ? null
-        : Product.fromMap(snapshot.key, snapshot.value).toEntity();
-  }
-
-  @override
   Future<void> save(ProductEntity entity) async {
     final isNew = entity.id == 0;
     AppLogger.i(_tag, 'save() name="${entity.name}" id=${entity.id} isNew=$isNew');
@@ -99,30 +67,6 @@ class SembastProductRepository implements ProductRepository {
       AppLogger.e(_tag, 'delete($id) falló', e, st);
       rethrow;
     }
-  }
-
-  @override
-  Future<void> updateStock(int id, int newStock) async {
-    AppLogger.d(_tag, 'updateStock($id, $newStock)');
-    try {
-      await _products.record(id).update(_db, {'stock': newStock});
-    } catch (e, st) {
-      AppLogger.e(_tag, 'updateStock($id) falló', e, st);
-      rethrow;
-    }
-  }
-
-  @override
-  Stream<List<ProductEntity>> watchAll({required int storeId}) {
-    AppLogger.d(_tag, 'watchAll(storeId=$storeId) stream iniciado');
-    final query = _products.query(
-      finder: Finder(filter: Filter.equals('storeId', storeId)),
-    );
-    return query.onSnapshots(_db).map(
-          (snapshots) => snapshots
-              .map((s) => Product.fromMap(s.key, s.value).toEntity())
-              .toList(),
-        );
   }
 
   @override

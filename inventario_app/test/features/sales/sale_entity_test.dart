@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:inventario_app/features/sales/domain/entities/sale_entity.dart';
 
-SaleItemEntity _item({int quantity = 1, double unitPrice = 1000}) =>
+SaleItemEntity _item({int quantity = 1, int unitPrice = 1000}) =>
     SaleItemEntity(
       productId:        1,
       productName:      'Producto',
@@ -21,6 +21,7 @@ SaleEntity _sale({List<SaleItemEntity>? items}) => SaleEntity(
       businessContext: 'generic',
       createdAt:       DateTime(2024),
       storeId:         0,
+      currencyCode:    'COP',
     );
 
 void main() {

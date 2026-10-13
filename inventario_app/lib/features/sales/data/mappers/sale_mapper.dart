@@ -12,6 +12,7 @@ extension SaleModelMapper on Sale {
         businessContext: businessContext,
         createdAt:       createdAt,
         storeId:         storeId,
+        currencyCode:    currencyCode,
         customerId:      customerId,
       );
 }
@@ -38,6 +39,7 @@ extension SaleEntityMapper on SaleEntity {
         businessContext: businessContext,
         createdAt:       createdAt,
         storeId:         storeId,
+        currencyCode:    currencyCode,
         customerId:      customerId,
       );
 }

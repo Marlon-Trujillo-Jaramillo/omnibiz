@@ -35,9 +35,5 @@ final storeRepositoryProvider = Provider<StoreRepository>((ref) {
 
 // ── Use case providers ─────────────────────────────────────────────────────────
 final processSaleUseCaseProvider = Provider<ProcessSaleUseCase>((ref) {
-  return ProcessSaleUseCase(
-    saleRepository:     ref.watch(saleRepositoryProvider),
-    productRepository:  ref.watch(productRepositoryProvider),
-    customerRepository: ref.watch(customerRepositoryProvider),
-  );
+  return ProcessSaleUseCase(saleRepository: ref.watch(saleRepositoryProvider));
 });

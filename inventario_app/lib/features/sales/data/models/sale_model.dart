@@ -9,19 +9,22 @@ class Sale {
     required this.paymentMethod,
     required this.businessContext,
     required this.storeId,
+    required this.currencyCode,
     this.customerId,
   });
 
   final int id;
   final List<SaleItem> items;
-  final double totalAmount;
-  final double taxAmount;
-  final double discountAmount;
+  /// Centavos.
+  final int totalAmount;
+  final int taxAmount;
+  final int discountAmount;
   final DateTime createdAt;
   final String paymentMethod;
   final int? customerId;
   final String businessContext;
   final int storeId;
+  final String currencyCode;
 
   Map<String, dynamic> toMap() => {
         'items': items.map((i) => i.toMap()).toList(),
@@ -33,6 +36,7 @@ class Sale {
         'customerId': customerId,
         'businessContext': businessContext,
         'storeId': storeId,
+        'currencyCode': currencyCode,
       };
 
   static Sale fromMap(int id, Map<String, dynamic> map) => Sale(
@@ -40,14 +44,16 @@ class Sale {
         items: (map['items'] as List)
             .map((i) => SaleItem.fromMap(Map<String, dynamic>.from(i as Map)))
             .toList(),
-        totalAmount: (map['totalAmount'] as num).toDouble(),
-        taxAmount: (map['taxAmount'] as num).toDouble(),
-        discountAmount: (map['discountAmount'] as num).toDouble(),
+        totalAmount: map['totalAmount'] as int,
+        taxAmount: map['taxAmount'] as int,
+        discountAmount: map['discountAmount'] as int,
         createdAt: DateTime.parse(map['createdAt'] as String),
         paymentMethod: map['paymentMethod'] as String,
         customerId: map['customerId'] as int?,
         businessContext: map['businessContext'] as String,
         storeId: map['storeId'] as int? ?? 0,
+        // La migración v2 rellena la moneda; COP sólo como red de seguridad.
+        currencyCode: map['currencyCode'] as String? ?? 'COP',
       );
 }
 
@@ -64,8 +70,9 @@ class SaleItem {
   final int productId;
   final String productName;
   final int quantity;
-  final double unitPrice;
-  final double totalPrice;
+  /// Centavos.
+  final int unitPrice;
+  final int totalPrice;
   final List<String> selectedVariants;
 
   Map<String, dynamic> toMap() => {
@@ -81,8 +88,8 @@ class SaleItem {
         productId: map['productId'] as int,
         productName: map['productName'] as String,
         quantity: map['quantity'] as int,
-        unitPrice: (map['unitPrice'] as num).toDouble(),
-        totalPrice: (map['totalPrice'] as num).toDouble(),
+        unitPrice: map['unitPrice'] as int,
+        totalPrice: map['totalPrice'] as int,
         selectedVariants: List<String>.from(map['selectedVariants'] as List),
       );
 }

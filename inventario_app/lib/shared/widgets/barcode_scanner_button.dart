@@ -11,7 +11,7 @@ class BarcodeScannerButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return IconButton(
-      icon: const Icon(LucideIcons.scan, color: OmniColors.textSecondary),
+      icon: Icon(LucideIcons.scan, color: context.colors.textSecondary),
       tooltip: 'Escanear código',
       onPressed: () => _openScanner(context),
     );
@@ -40,6 +40,9 @@ class _ScannerDialogState extends State<_ScannerDialog> {
   String? _cameraError;
   final _textCtrl = TextEditingController();
   MobileScannerController? _ctrl;
+  /// La cámara emite varias detecciones por segundo: solo la primera cierra
+  /// el diálogo (un segundo `pop` cerraría la pantalla de debajo).
+  bool _handled = false;
 
   @override
   void dispose() {
@@ -51,7 +54,9 @@ class _ScannerDialogState extends State<_ScannerDialog> {
   void _openCamera() {
     _ctrl?.dispose();
     setState(() {
-      _ctrl = MobileScannerController();
+      _ctrl = MobileScannerController(
+        detectionSpeed: DetectionSpeed.noDuplicates,
+      );
       _showCamera = true;
       _cameraError = null;
     });
@@ -62,25 +67,30 @@ class _ScannerDialogState extends State<_ScannerDialog> {
     setState(() => _showCamera = false);
   }
 
+  void _close([String? result]) {
+    if (_handled) return;
+    _handled = true;
+    _ctrl?.stop();
+    Navigator.pop(context, result);
+  }
+
   void _confirm(String value) {
     final v = value.trim();
-    if (v.isNotEmpty) Navigator.pop(context, v);
+    if (v.isNotEmpty) _close(v);
   }
 
   @override
   Widget build(BuildContext context) {
     return Dialog(
-      backgroundColor: OmniColors.bgModal,
       insetPadding: const EdgeInsets.all(OmniSpacing.xl),
-      shape: RoundedRectangleBorder(borderRadius: OmniRadius.xlAll),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          _DialogHeader(onClose: () => Navigator.pop(context)),
+          _DialogHeader(onClose: _close),
           if (_showCamera)
             _CameraView(
               controller: _ctrl!,
-              onDetected: (code) => Navigator.pop(context, code),
+              onDetected: _close,
               onError: (msg) => setState(() {
                 _showCamera = false;
                 _cameraError = msg;
@@ -113,14 +123,14 @@ class _DialogHeader extends StatelessWidget {
         OmniSpacing.xl, OmniSpacing.md, OmniSpacing.sm, 0),
       child: Row(
         children: [
-          const Icon(LucideIcons.scan, color: OmniColors.primary, size: 18),
+          Icon(LucideIcons.scan, color: context.colors.primary, size: OmniSizes.iconMd),
           const SizedBox(width: OmniSpacing.sm),
           Expanded(
-            child: Text('Escanear Código', style: OmniTypography.headingSm),
+            child: Text('Escanear Código', style: context.text.headingSm),
           ),
           IconButton(
-            icon: const Icon(LucideIcons.x,
-                color: OmniColors.textSecondary, size: 18),
+            icon: Icon(LucideIcons.x,
+                color: context.colors.textSecondary, size: OmniSizes.iconMd),
             onPressed: onClose,
           ),
         ],
@@ -247,11 +257,11 @@ class _ScannerPreview extends StatelessWidget {
                   errorBuilder: (_, error) {
                     WidgetsBinding.instance.addPostFrameCallback(
                         (_) => onError(_CameraView._errorMessage(error)));
-                    return const ColoredBox(
-                      color: Colors.black,
+                    return ColoredBox(
+                      color: context.colors.mediaBg,
                       child: Center(
                         child: Icon(LucideIcons.cameraOff,
-                            color: OmniColors.textDisabled, size: 48),
+                            color: context.colors.textDisabled, size: OmniSizes.iconHero),
                       ),
                     );
                   },
@@ -277,7 +287,7 @@ class _ScanReticle extends StatelessWidget {
         heightFactor: 0.55,
         child: Container(
           decoration: BoxDecoration(
-            border: Border.all(color: OmniColors.primary, width: 2),
+            border: Border.all(color: context.colors.primary, width: OmniSizes.stroke),
             borderRadius: OmniRadius.mdAll,
           ),
         ),
@@ -300,13 +310,13 @@ class _ScannerHintRow extends StatelessWidget {
       ),
       child: Row(
         children: [
-          const Icon(LucideIcons.focus,
-              size: OmniSpacing.md, color: OmniColors.textMuted),
+          Icon(LucideIcons.focus,
+              size: OmniSpacing.md, color: context.colors.textMuted),
           const SizedBox(width: OmniSpacing.xs),
           Text(
             'Apunta al código',
-            style: OmniTypography.caption.copyWith(
-              color: OmniColors.textMuted,
+            style: context.text.caption.copyWith(
+              color: context.colors.textMuted,
             ),
           ),
           const Spacer(),
@@ -331,28 +341,12 @@ class _ErrorBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(OmniSpacing.sm),
-      margin: const EdgeInsets.only(bottom: OmniSpacing.md),
-      decoration: BoxDecoration(
-        color: OmniColors.warningBg,
-        borderRadius: OmniRadius.mdAll,
-        border: Border.all(color: OmniColors.warning.withAlpha(40)),
-      ),
-      child: Row(
-        children: [
-          const Icon(LucideIcons.alertTriangle,
-              color: OmniColors.warning, size: 14),
-          const SizedBox(width: OmniSpacing.sm),
-          Expanded(
-            child: Text(
-              message,
-              style: OmniTypography.caption.copyWith(
-                color: OmniColors.warning,
-              ),
-            ),
-          ),
-        ],
+    return Padding(
+      padding: const EdgeInsets.only(bottom: OmniSpacing.md),
+      child: OmniBanner(
+        message: message,
+        tone: OmniTone.warning,
+        icon: LucideIcons.cameraOff,
       ),
     );
   }
@@ -367,17 +361,17 @@ class _OrDivider extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: OmniSpacing.md),
       child: Row(
         children: [
-          const Expanded(child: Divider(color: OmniColors.borderSubtle)),
+          Expanded(child: Divider(color: context.colors.borderSubtle)),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: OmniSpacing.sm),
             child: Text(
               'o escribe el código',
-              style: OmniTypography.caption.copyWith(
-                color: OmniColors.textDisabled,
+              style: context.text.caption.copyWith(
+                color: context.colors.textDisabled,
               ),
             ),
           ),
-          const Expanded(child: Divider(color: OmniColors.borderSubtle)),
+          Expanded(child: Divider(color: context.colors.borderSubtle)),
         ],
       ),
     );

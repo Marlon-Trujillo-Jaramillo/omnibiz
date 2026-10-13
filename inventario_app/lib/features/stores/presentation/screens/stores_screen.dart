@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:inventario_app/core/design_system/design_system.dart';
 import 'package:inventario_app/features/stores/domain/entities/store_entity.dart';
+import 'package:inventario_app/features/stores/domain/repositories/store_repository.dart';
 import 'package:inventario_app/features/stores/presentation/providers/stores_notifier.dart';
 import 'package:inventario_app/shared/providers/current_store_provider.dart';
 
@@ -27,11 +28,8 @@ class StoresScreen extends ConsumerWidget {
     final currentId   = ref.watch(currentStoreProvider);
 
     return Scaffold(
-      backgroundColor: OmniColors.bg,
       appBar: AppBar(
-        backgroundColor: OmniColors.bg,
-        elevation: 0,
-        title: Text('Sucursales', style: OmniTypography.headingMd),
+        title: const Text('Sucursales'),
         actions: [
           Padding(
             padding: const EdgeInsets.only(right: OmniSpacing.base),
@@ -45,8 +43,11 @@ class StoresScreen extends ConsumerWidget {
         ],
       ),
       body: storesAsync.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => Center(child: Text('Error: $e')),
+        loading: () => const OmniSkeletonList(count: 5),
+        error: (_, __) => OmniErrorState(
+          message: 'No se pudo cargar la lista.',
+          onRetry: () => ref.invalidate(storesProvider),
+        ),
         data: (stores) => stores.isEmpty
             ? OmniEmptyState(
                 icon: LucideIcons.store,
@@ -61,13 +62,8 @@ class StoresScreen extends ConsumerWidget {
   }
 
   static void _openSheet(BuildContext context, WidgetRef ref, StoreEntity? existing) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: OmniColors.bgModal,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(OmniRadius.xl)),
-      ),
+    showOmniSheet(
+      context,
       builder: (_) => _StoreSheet(existing: existing),
     );
   }
@@ -107,57 +103,48 @@ class _StoreTile extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return InkWell(
-      borderRadius: OmniRadius.mdAll,
+    return OmniCard(
+      selected: isActive,
       onTap: isActive
           ? null
           : () => ref.read(currentStoreProvider.notifier).set(store.id),
-      child: Container(
-        padding: const EdgeInsets.symmetric(
-          horizontal: OmniSpacing.base,
-          vertical: OmniSpacing.md,
-        ),
-        decoration: BoxDecoration(
-          color: isActive ? OmniColors.primaryBg : OmniColors.bgSurface,
-          borderRadius: OmniRadius.mdAll,
-          border: Border.all(
-            color: isActive ? OmniColors.primary : OmniColors.borderSubtle,
-            width: isActive ? 1.5 : 1,
-          ),
-        ),
-        child: Row(
-          children: [
-            OmniIconAvatar(
-              icon: _iconFor(store.icon),
-              color: OmniColors.primary,
-              size: 40,
-            ),
-            const SizedBox(width: OmniSpacing.md),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(store.name, style: OmniTypography.bodyMd),
-                  if (store.address != null && store.address!.isNotEmpty) ...[
-                    const SizedBox(height: 2),
-                    Text(
-                      store.address!,
-                      style: OmniTypography.caption
-                          .copyWith(color: OmniColors.textMuted),
+      padding: const EdgeInsets.fromLTRB(
+          OmniSpacing.md, OmniSpacing.md, OmniSpacing.xs, OmniSpacing.md),
+      child: Row(
+        children: [
+          OmniIconAvatar(icon: _iconFor(store.icon)),
+          const SizedBox(width: OmniSpacing.md),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Flexible(
+                      child: Text(store.name,
+                          style: context.text.bodyMd
+                              .copyWith(fontWeight: FontWeight.w600),
+                          overflow: TextOverflow.ellipsis),
                     ),
+                    if (isActive) ...[
+                      const SizedBox(width: OmniSpacing.sm),
+                      const OmniTag(
+                          label: 'Activa', tone: OmniTone.brand, dense: true),
+                    ],
                   ],
+                ),
+                if (store.address != null && store.address!.isNotEmpty) ...[
+                  const SizedBox(height: OmniSpacing.xxs),
+                  Text(store.address!, style: context.text.caption),
+                ] else if (!isActive) ...[
+                  const SizedBox(height: OmniSpacing.xxs),
+                  Text('Toca para activar', style: context.text.caption),
                 ],
-              ),
+              ],
             ),
-            if (isActive)
-              const Padding(
-                padding: EdgeInsets.only(right: OmniSpacing.sm),
-                child: Icon(LucideIcons.checkCircle,
-                    color: OmniColors.primary, size: 20),
-              ),
-            _TileActions(store: store, canDelete: canDelete),
-          ],
-        ),
+          ),
+          _TileActions(store: store, canDelete: canDelete),
+        ],
       ),
     );
   }
@@ -174,14 +161,15 @@ class _TileActions extends ConsumerWidget {
       mainAxisSize: MainAxisSize.min,
       children: [
         IconButton(
-          icon: const Icon(LucideIcons.pencil,
-              size: 18, color: OmniColors.textSecondary),
+          tooltip: 'Editar',
+          icon: const Icon(LucideIcons.pencil, size: OmniSizes.iconSm + 2),
           onPressed: () => StoresScreen._openSheet(context, ref, store),
         ),
         IconButton(
+          tooltip: 'Eliminar',
           icon: Icon(LucideIcons.trash2,
-              size: 18,
-              color: canDelete ? OmniColors.danger : OmniColors.textDisabled),
+              size: OmniSizes.iconSm + 2,
+              color: canDelete ? context.colors.danger : context.colors.textDisabled),
           onPressed: canDelete ? () => _confirmDelete(context, ref) : null,
         ),
       ],
@@ -192,15 +180,25 @@ class _TileActions extends ConsumerWidget {
     final confirmed = await OmniConfirmDialog.show(
       context,
       title: 'Eliminar sucursal',
-      body: '¿Eliminar "${store.name}"? Los productos, ventas y clientes '
-          'asociados a esta sucursal no se eliminarán, pero dejarán de ser accesibles.',
+      body: '¿Eliminar "${store.name}"? Solo se puede eliminar una sucursal '
+          'sin productos, ventas ni clientes.',
       confirmLabel: 'Eliminar',
       destructive: true,
     );
     if (!confirmed || !context.mounted) return;
 
+    final messenger = ScaffoldMessenger.of(context);
     final wasActive = ref.read(currentStoreProvider) == store.id;
-    await ref.read(storesProvider.notifier).delete(store.id);
+    try {
+      await ref.read(storesProvider.notifier).delete(store.id);
+    } on StoreInUseException catch (e) {
+      messenger.showOmni(e.message, tone: OmniTone.danger);
+      return;
+    } catch (_) {
+      messenger.showOmni('No se pudo eliminar la sucursal.',
+          tone: OmniTone.danger);
+      return;
+    }
 
     if (wasActive) {
       final remaining = await ref.read(storesProvider.future);
@@ -257,7 +255,16 @@ class _StoreSheetState extends ConsumerState<_StoreSheet> {
       address:   address.isEmpty ? null : address,
     );
 
-    await ref.read(storesProvider.notifier).add(store);
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      await ref.read(storesProvider.notifier).add(store);
+    } catch (_) {
+      // Antes el botón quedaba cargando para siempre si fallaba el guardado.
+      if (mounted) setState(() => _loading = false);
+      messenger.showOmni('No se pudo guardar la sucursal.',
+          tone: OmniTone.danger);
+      return;
+    }
 
     if (!_isEdit) {
       // Primera sucursal creada en el flujo → queda activa automáticamente.
@@ -275,26 +282,11 @@ class _StoreSheetState extends ConsumerState<_StoreSheet> {
 
   @override
   Widget build(BuildContext context) {
-    return OmniResponsiveCenter(
-      maxWidth: OmniBreakpoints.tablet,
-      child: Padding(
-        padding: EdgeInsets.only(
-          left: OmniSpacing.xl,
-          right: OmniSpacing.xl,
-          top: OmniSpacing.xl,
-          bottom: OmniSpacing.xxl + MediaQuery.viewInsetsOf(context).bottom,
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const OmniDragHandle(),
-            const SizedBox(height: OmniSpacing.base),
-            Text(
-              _isEdit ? 'Editar sucursal' : 'Nueva sucursal',
-              style: OmniTypography.headingLg,
-            ),
-            const SizedBox(height: OmniSpacing.xl),
+    return OmniSheetBody(
+      title: _isEdit ? 'Editar sucursal' : 'Nueva sucursal',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
             OmniTextField(
               controller: _nameCtrl,
               label: 'Nombre',
@@ -309,7 +301,7 @@ class _StoreSheetState extends ConsumerState<_StoreSheet> {
               textInputAction: TextInputAction.done,
             ),
             const SizedBox(height: OmniSpacing.xl),
-            Text('Ícono', style: OmniTypography.headingMd),
+            Text('ÍCONO', style: context.text.overline),
             const SizedBox(height: OmniSpacing.md),
             _IconPicker(
               selected: _selectedIcon,
@@ -324,8 +316,7 @@ class _StoreSheetState extends ConsumerState<_StoreSheet> {
               size: OmniButtonSize.lg,
               icon: _isEdit ? LucideIcons.save : LucideIcons.plus,
             ),
-          ],
-        ),
+        ],
       ),
     );
   }
@@ -368,23 +359,32 @@ class _IconOption extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 150),
-        padding: const EdgeInsets.all(OmniSpacing.md),
-        decoration: BoxDecoration(
-          color: selected ? OmniColors.primaryBg : OmniColors.bgSurface,
-          borderRadius: OmniRadius.mdAll,
-          border: Border.all(
-            color: selected ? OmniColors.primary : OmniColors.borderSubtle,
-            width: selected ? 1.5 : 1,
+    final c = context.colors;
+    return Semantics(
+      selected: selected,
+      button: true,
+      label: iconKey,
+      child: OmniPressable(
+        child: GestureDetector(
+          onTap: onTap,
+          child: AnimatedContainer(
+            duration: OmniMotion.base,
+            width: OmniSizes.controlLg,
+            height: OmniSizes.controlLg,
+            decoration: BoxDecoration(
+              color: selected ? c.primaryBg : c.bgRaised,
+              borderRadius: OmniRadius.mdAll,
+              border: Border.all(
+                color: selected ? c.primary : c.borderSubtle,
+                width: selected ? OmniSizes.focusRing : OmniSizes.hairline,
+              ),
+            ),
+            child: Icon(
+              iconData,
+              size: OmniSizes.iconLg,
+              color: selected ? c.primaryText : c.textSecondary,
+            ),
           ),
-        ),
-        child: Icon(
-          iconData,
-          size: OmniSpacing.xl,
-          color: selected ? OmniColors.primary : OmniColors.textSecondary,
         ),
       ),
     );

@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     id("kotlin-android")
@@ -5,8 +7,19 @@ plugins {
     id("dev.flutter.flutter-gradle-plugin")
 }
 
+// Firma de release: android/key.properties (no versionado, ver CLAUDE.md).
+// Si no existe se firma con la clave de debug y se avisa: ese APK NO sirve
+// para publicar ni para actualizar una instalación firmada con la clave real.
+val keystorePropertiesFile = rootProject.file("key.properties")
+val keystoreProperties = Properties().apply {
+    if (keystorePropertiesFile.exists()) {
+        keystorePropertiesFile.inputStream().use { load(it) }
+    }
+}
+val hasReleaseKeystore = keystorePropertiesFile.exists()
+
 android {
-    namespace = "com.example.inventario_app"
+    namespace = "com.omnibiz.pos"
     compileSdk = 36
     ndkVersion = "27.0.12077973"
 
@@ -20,8 +33,7 @@ android {
     }
 
     defaultConfig {
-        // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
-        applicationId = "com.example.inventario_app"
+        applicationId = "com.omnibiz.pos"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = 24
@@ -30,11 +42,28 @@ android {
         versionName = flutter.versionName
     }
 
+    signingConfigs {
+        if (hasReleaseKeystore) {
+            create("release") {
+                keyAlias = keystoreProperties.getProperty("keyAlias")
+                keyPassword = keystoreProperties.getProperty("keyPassword")
+                storeFile = file(keystoreProperties.getProperty("storeFile"))
+                storePassword = keystoreProperties.getProperty("storePassword")
+            }
+        }
+    }
+
     buildTypes {
         release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
-            signingConfig = signingConfigs.getByName("debug")
+            signingConfig = if (hasReleaseKeystore) {
+                signingConfigs.getByName("release")
+            } else {
+                logger.warn(
+                    "WARNING: android/key.properties no existe; el build de release " +
+                        "se firma con la clave de DEBUG (no apto para publicar)."
+                )
+                signingConfigs.getByName("debug")
+            }
         }
     }
 }

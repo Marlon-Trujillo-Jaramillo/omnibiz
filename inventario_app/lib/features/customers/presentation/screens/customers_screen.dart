@@ -7,7 +7,9 @@ import 'package:inventario_app/core/error/error_mapper.dart';
 import 'package:inventario_app/core/error/failures.dart';
 import 'package:inventario_app/core/utils/currency_formatter.dart';
 import 'package:inventario_app/core/utils/form_validators.dart';
+import 'package:inventario_app/core/utils/money.dart';
 import 'package:inventario_app/features/customers/domain/entities/customer_entity.dart';
+import 'package:inventario_app/features/customers/domain/repositories/customer_repository.dart';
 import 'package:inventario_app/features/customers/presentation/providers/customers_notifier.dart';
 import 'package:inventario_app/shared/providers/currency_provider.dart';
 import 'package:inventario_app/shared/providers/current_store_provider.dart';
@@ -36,21 +38,22 @@ class _CustomersScreenState extends ConsumerState<CustomersScreen> {
     final search         = ref.watch(_searchProvider);
     final customers      = customersAsync.valueOrNull ?? [];
     final filtered       = _filterCustomers(customers, search);
-    final totalDebt      = customers.fold(0.0, (s, c) => s + c.totalDebt);
+    final totalDebt      = customers.fold(0, (s, c) => s + c.totalDebt);
 
     return Scaffold(
-      backgroundColor: OmniColors.bg,
-      appBar: AppBar(
-        backgroundColor: OmniColors.bg,
-        elevation: 0,
-        title: Text('Clientes', style: OmniTypography.headingMd),
-      ),
+      appBar: AppBar(title: const Text('Clientes')),
       floatingActionButton: _NewCustomerFab(onTap: _showAddDialog),
-      body: Column(
+      body: OmniResponsiveCenter(
+       child: Column(
         children: [
-          if (totalDebt > 0) _DebtSummaryBanner(totalDebt: totalDebt),
+          if (customers.isNotEmpty)
+            _DebtSummaryBanner(
+              totalDebt: totalDebt,
+              debtors: customers.where((c) => c.hasDebt).length,
+              total: customers.length,
+            ),
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: OmniSpacing.lg),
+            padding: const EdgeInsets.symmetric(horizontal: OmniSpacing.base),
             child: OmniSearchBar(
               controller: _searchCtrl,
               hint: 'Buscar por nombre o teléfono',
@@ -70,8 +73,6 @@ class _CustomersScreenState extends ConsumerState<CustomersScreen> {
               ),
               data: (_) => RefreshIndicator(
                 onRefresh: () => ref.refresh(customersProvider.future),
-                color: OmniColors.primary,
-                backgroundColor: OmniColors.bgSurface,
                 child: filtered.isEmpty
                     ? ListView(
                         physics: const AlwaysScrollableScrollPhysics(),
@@ -84,6 +85,7 @@ class _CustomersScreenState extends ConsumerState<CustomersScreen> {
             ),
           ),
         ],
+      ),
       ),
     );
   }
@@ -112,9 +114,12 @@ class _CustomersList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ListView.builder(
-      padding: const EdgeInsets.symmetric(horizontal: OmniSpacing.lg),
+    return ListView.separated(
+      physics: const AlwaysScrollableScrollPhysics(),
+      padding: const EdgeInsets.fromLTRB(OmniSpacing.base, 0, OmniSpacing.base,
+          OmniSpacing.xxxl + OmniSpacing.xxl),
       itemCount: customers.length,
+      separatorBuilder: (_, __) => const SizedBox(height: OmniSpacing.sm),
       itemBuilder: (_, i) => _CustomerTile(customers[i]),
     );
   }
@@ -128,53 +133,62 @@ class _EmptyCustomers extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return OmniEmptyState(
-      icon: LucideIcons.users,
+      icon: hasSearch ? LucideIcons.searchX : LucideIcons.users,
       title: hasSearch ? 'Sin resultados' : 'Sin clientes aún',
       subtitle: hasSearch
           ? 'Intenta con otro término'
-          : 'Agrega tu primer cliente',
+          : 'Registra clientes para venderles fiado y llevar su saldo',
     );
   }
 }
 
-// ── Debt summary banner ────────────────────────────────────────────────────────
+// ── Debt summary ───────────────────────────────────────────────────────────────
 class _DebtSummaryBanner extends ConsumerWidget {
-  const _DebtSummaryBanner({required this.totalDebt});
-  final double totalDebt;
+  const _DebtSummaryBanner({
+    required this.totalDebt,
+    required this.debtors,
+    required this.total,
+  });
+  final int totalDebt;
+  final int debtors;
+  final int total;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return Container(
-      margin: const EdgeInsets.fromLTRB(
-        OmniSpacing.lg, 0, OmniSpacing.lg, OmniSpacing.base),
-      padding: const EdgeInsets.all(OmniSpacing.base),
-      decoration: BoxDecoration(
-        color: OmniColors.dangerBg,
-        borderRadius: OmniRadius.lgAll,
-        border: Border.all(color: OmniColors.danger.withAlpha(40)),
-      ),
-      child: Row(
-        children: [
-          const Icon(LucideIcons.alertCircle,
-              color: OmniColors.danger, size: 18),
-          const SizedBox(width: OmniSpacing.md),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('Deuda total pendiente',
-                    style: OmniTypography.caption),
-                const SizedBox(height: OmniSpacing.xs),
-                Text(
-                  ref.formatMoney(totalDebt),
-                  style: OmniTypography.headingMd.copyWith(
-                    color: OmniColors.danger,
-                  ),
-                ),
-              ],
+    final c = context.colors;
+    final hasDebt = totalDebt > 0;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+          OmniSpacing.base, OmniSpacing.xs, OmniSpacing.base, OmniSpacing.base),
+      child: OmniCard(
+        child: Row(
+          children: [
+            OmniIconAvatar(
+              icon: hasDebt ? LucideIcons.notebookPen : LucideIcons.checkCircle2,
+              color: hasDebt ? c.danger : c.success,
             ),
-          ),
-        ],
+            const SizedBox(width: OmniSpacing.md),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Por cobrar (fiado)', style: context.text.label),
+                  const SizedBox(height: OmniSpacing.xxs),
+                  Text(
+                    ref.formatMoney(totalDebt),
+                    style: context.text.priceLg
+                        .copyWith(color: hasDebt ? c.danger : c.textPrimary),
+                  ),
+                ],
+              ),
+            ),
+            OmniTag(
+              label: '$debtors de $total',
+              tone: hasDebt ? OmniTone.danger : OmniTone.success,
+              icon: LucideIcons.users,
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -191,8 +205,6 @@ class _NewCustomerFab extends StatelessWidget {
       onPressed: onTap,
       icon: const Icon(LucideIcons.userPlus),
       label: const Text('Nuevo cliente'),
-      backgroundColor: OmniColors.primary,
-      foregroundColor: Colors.white,
     );
   }
 }
@@ -204,24 +216,39 @@ class _CustomerTile extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: OmniSpacing.sm),
-      padding: const EdgeInsets.symmetric(
-        horizontal: OmniSpacing.base,
-        vertical: OmniSpacing.md,
-      ),
-      decoration: BoxDecoration(
-        color: OmniColors.bgSurface,
-        borderRadius: OmniRadius.lgAll,
-        border: Border.all(color: OmniColors.borderSubtle),
-      ),
+    return OmniCard(
+      onTap: customer.hasDebt ? () => _openPay(context, ref, customer) : null,
+      padding: const EdgeInsets.fromLTRB(
+          OmniSpacing.md, OmniSpacing.md, OmniSpacing.xs, OmniSpacing.md),
       child: Row(
         children: [
           OmniAvatar(name: customer.name),
           const SizedBox(width: OmniSpacing.md),
-          Expanded(child: _CustomerInfo(customer: customer)),
-          _DebtBadge(customer: customer),
-          const SizedBox(width: OmniSpacing.xs),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(customer.name,
+                    style: context.text.bodyMd
+                        .copyWith(fontWeight: FontWeight.w600),
+                    overflow: TextOverflow.ellipsis),
+                if (customer.phone != null) ...[
+                  const SizedBox(height: OmniSpacing.xxs),
+                  Text(customer.phone!, style: context.text.caption.tabular),
+                ],
+              ],
+            ),
+          ),
+          customer.hasDebt
+              ? OmniTag(
+                  label: 'Debe ${ref.formatMoney(customer.totalDebt)}',
+                  tone: OmniTone.danger,
+                )
+              : const OmniTag(
+                  label: 'Al día',
+                  tone: OmniTone.success,
+                  icon: LucideIcons.check,
+                ),
           _CustomerMenu(customer: customer),
         ],
       ),
@@ -229,47 +256,12 @@ class _CustomerTile extends ConsumerWidget {
   }
 }
 
-class _CustomerInfo extends StatelessWidget {
-  const _CustomerInfo({required this.customer});
-  final CustomerEntity customer;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(customer.name, style: OmniTypography.headingSm,
-            overflow: TextOverflow.ellipsis),
-        if (customer.phone != null) ...[
-          const SizedBox(height: 2),
-          Text(customer.phone!, style: OmniTypography.caption),
-        ],
-      ],
-    );
-  }
-}
-
-class _DebtBadge extends ConsumerWidget {
-  const _DebtBadge({required this.customer});
-  final CustomerEntity customer;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.end,
-      children: [
-        Text(
-          ref.formatMoney(customer.totalDebt),
-          style: OmniTypography.headingSm.copyWith(
-            color: customer.hasDebt ? OmniColors.danger : OmniColors.success,
-            fontWeight: FontWeight.w800,
-          ),
-        ),
-        const SizedBox(height: 2),
-        Text('Deuda', style: OmniTypography.caption),
-      ],
-    );
-  }
+Future<void> _openPay(
+    BuildContext context, WidgetRef ref, CustomerEntity customer) {
+  return showDialog(
+    context: context,
+    builder: (_) => _PayDialog(customer: customer, ref: ref),
+  );
 }
 
 class _CustomerMenu extends ConsumerWidget {
@@ -278,27 +270,28 @@ class _CustomerMenu extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final c = context.colors;
     return PopupMenuButton<String>(
-      icon: const Icon(LucideIcons.moreVertical,
-          size: 16, color: OmniColors.textMuted),
-      color: OmniColors.bgPopup,
+      tooltip: 'Opciones',
+      icon: Icon(LucideIcons.moreVertical,
+          size: OmniSizes.iconSm, color: c.textMuted),
       onSelected: (v) => _onSelected(context, ref, v),
       itemBuilder: (_) => [
         if (customer.hasDebt)
-          const PopupMenuItem(
+          PopupMenuItem(
             value: 'pay',
             child: _MenuRow(
-              icon: LucideIcons.creditCard,
+              icon: LucideIcons.wallet,
               label: 'Registrar pago',
-              color: OmniColors.success,
+              color: c.success,
             ),
           ),
-        const PopupMenuItem(
+        PopupMenuItem(
           value: 'delete',
           child: _MenuRow(
             icon: LucideIcons.trash2,
             label: 'Eliminar',
-            color: OmniColors.danger,
+            color: c.danger,
           ),
         ),
       ],
@@ -308,10 +301,7 @@ class _CustomerMenu extends ConsumerWidget {
   Future<void> _onSelected(
       BuildContext context, WidgetRef ref, String value) async {
     if (value == 'pay') {
-      await showDialog(
-        context: context,
-        builder: (_) => _PayDialog(customer: customer, ref: ref),
-      );
+      await _openPay(context, ref, customer);
       return;
     }
     final ok = await OmniConfirmDialog.show(
@@ -340,9 +330,9 @@ class _MenuRow extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       children: [
-        Icon(icon, size: 15, color: color),
-        const SizedBox(width: OmniSpacing.sm),
-        Text(label, style: TextStyle(color: color)),
+        Icon(icon, size: OmniSizes.iconSm, color: color),
+        const SizedBox(width: OmniSpacing.md),
+        Text(label, style: context.text.bodyMd.copyWith(color: color)),
       ],
     );
   }
@@ -361,6 +351,7 @@ class _AddCustomerDialogState extends State<_AddCustomerDialog> {
   final _nameCtrl  = TextEditingController();
   final _phoneCtrl = TextEditingController();
   final _formKey   = GlobalKey<FormState>();
+  bool _submitting = false;
 
   @override
   void dispose() {
@@ -369,9 +360,12 @@ class _AddCustomerDialogState extends State<_AddCustomerDialog> {
     super.dispose();
   }
 
-  Future<void> _submit() async {
-    if (!_formKey.currentState!.validate()) return;
-    await widget.ref.read(customersProvider.notifier).add(
+  Future<void> _submit(int storeId) async {
+    if (_submitting || !_formKey.currentState!.validate()) return;
+    setState(() => _submitting = true);
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      await widget.ref.read(customersProvider.notifier).add(
       CustomerEntity(
         id:        0,
         name:      _nameCtrl.text.trim(),
@@ -380,52 +374,54 @@ class _AddCustomerDialogState extends State<_AddCustomerDialog> {
             : _phoneCtrl.text.trim(),
         totalDebt: 0,
         createdAt: DateTime.now(),
-        storeId:   widget.ref.read(currentStoreProvider) ?? 0,
+        storeId:   storeId,
       ),
     );
+    } catch (_) {
+      if (mounted) setState(() => _submitting = false);
+      messenger.showOmni('No se pudo crear el cliente.', tone: OmniTone.danger);
+      return;
+    }
     if (mounted) Navigator.pop(context);
   }
 
   @override
   Widget build(BuildContext context) {
-    return Dialog(
-      backgroundColor: OmniColors.bgModal,
-      shape: RoundedRectangleBorder(borderRadius: OmniRadius.xlAll),
-      child: Padding(
-        padding: const EdgeInsets.all(OmniSpacing.xl),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('Nuevo Cliente', style: OmniTypography.headingMd),
-              const SizedBox(height: OmniSpacing.xl),
-              OmniTextField(
-                controller: _nameCtrl,
-                label: 'Nombre completo',
-                prefixIcon: LucideIcons.user,
-                validator: (v) => FormValidators.required(v, 'Nombre'),
-                textInputAction: TextInputAction.next,
-              ),
-              const SizedBox(height: OmniSpacing.md),
-              OmniTextField(
-                controller: _phoneCtrl,
-                label: 'Teléfono (opcional)',
-                prefixIcon: LucideIcons.phone,
-                keyboardType: TextInputType.phone,
-                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                validator: FormValidators.phone,
-                textInputAction: TextInputAction.done,
-              ),
-              const SizedBox(height: OmniSpacing.xl),
-              _DialogActions(
-                onCancel: () => Navigator.pop(context),
-                onConfirm: _submit,
-                confirmLabel: 'Crear',
-              ),
-            ],
-          ),
+    // Sin sucursal cargada no se crea nada (nunca storeId 0).
+    final storeId = widget.ref.read(currentStoreProvider);
+    return Form(
+      key: _formKey,
+      child: OmniDialog(
+        title: 'Nuevo cliente',
+        icon: LucideIcons.userPlus,
+        actions: OmniDialogActions(
+          onCancel: () => Navigator.pop(context),
+          onConfirm: storeId == null ? null : () => _submit(storeId),
+          confirmLabel: 'Crear',
+          loading: _submitting,
+        ),
+        child: Column(
+          children: [
+            OmniTextField(
+              controller: _nameCtrl,
+              label: 'Nombre completo',
+              prefixIcon: LucideIcons.user,
+              autofocus: true,
+              validator: (v) => FormValidators.required(v, 'Nombre'),
+              textInputAction: TextInputAction.next,
+            ),
+            const SizedBox(height: OmniSpacing.md),
+            OmniTextField(
+              controller: _phoneCtrl,
+              label: 'Teléfono (opcional)',
+              prefixIcon: LucideIcons.phone,
+              keyboardType: TextInputType.phone,
+              tabularDigits: true,
+              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+              validator: FormValidators.phone,
+              textInputAction: TextInputAction.done,
+            ),
+          ],
         ),
       ),
     );
@@ -445,12 +441,13 @@ class _PayDialog extends StatefulWidget {
 class _PayDialogState extends State<_PayDialog> {
   late final TextEditingController _amountCtrl;
   final _formKey = GlobalKey<FormState>();
+  bool _submitting = false;
 
   @override
   void initState() {
     super.initState();
     _amountCtrl = TextEditingController(
-        text: widget.customer.totalDebt.toStringAsFixed(2));
+        text: Money.toInput(widget.customer.totalDebt));
   }
 
   @override
@@ -459,91 +456,89 @@ class _PayDialogState extends State<_PayDialog> {
     super.dispose();
   }
 
-  Future<void> _submit() async {
-    if (!_formKey.currentState!.validate()) return;
-    final amount = double.parse(_amountCtrl.text.trim());
-    await widget.ref
-        .read(customersProvider.notifier)
-        .registerPayment(widget.customer.id, amount);
-    if (mounted) {
-      Navigator.pop(context);
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text(
-            'Pago de ${CurrencyFormatter.format(amount, widget.ref.read(currencyProvider))} registrado'),
-        backgroundColor: OmniColors.bgPopup,
-      ));
+  String? _validateAmount(String? v) {
+    final base = FormValidators.money(v, 'Monto');
+    if (base != null) return base;
+    final amount = Money.parse(v)!;
+    if (amount > widget.customer.totalDebt) {
+      return 'No puede superar la deuda '
+          '(${CurrencyFormatter.format(widget.customer.totalDebt, widget.ref.read(currencyProvider))})';
     }
+    return null;
+  }
+
+  Future<void> _submit() async {
+    if (_submitting || !_formKey.currentState!.validate()) return;
+    setState(() => _submitting = true);
+    final amount    = Money.parse(_amountCtrl.text)!;
+    final currency  = widget.ref.read(currencyProvider);
+    // Capturar antes de cerrar el diálogo: su context deja de ser válido.
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      await widget.ref
+          .read(customersProvider.notifier)
+          .registerPayment(widget.customer.id, amount);
+    } catch (e) {
+      if (mounted) setState(() => _submitting = false);
+      messenger.showOmni(
+        e is InvalidPaymentException ? e.message : 'No se pudo registrar el pago.',
+        tone: OmniTone.danger,
+      );
+      return;
+    }
+    if (mounted) Navigator.pop(context);
+    messenger.showOmni(
+      'Pago de ${CurrencyFormatter.format(amount, currency)} registrado',
+      tone: OmniTone.success,
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    return Dialog(
-      backgroundColor: OmniColors.bgModal,
-      shape: RoundedRectangleBorder(borderRadius: OmniRadius.xlAll),
-      child: Padding(
-        padding: const EdgeInsets.all(OmniSpacing.xl),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('Registrar Pago', style: OmniTypography.headingMd),
-              const SizedBox(height: OmniSpacing.xs),
-              Text('Cliente: ${widget.customer.name}',
-                  style: OmniTypography.bodySm),
-              const SizedBox(height: OmniSpacing.xl),
-              OmniTextField(
-                controller: _amountCtrl,
-                label: 'Monto pagado',
-                prefixIcon: LucideIcons.dollarSign,
-                keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                inputFormatters: [
-                  FilteringTextInputFormatter.allow(RegExp(r'[0-9.]'))
-                ],
-                validator: (v) => FormValidators.positiveNumber(v, 'Monto'),
-              ),
-              const SizedBox(height: OmniSpacing.xl),
-              _DialogActions(
-                onCancel: () => Navigator.pop(context),
-                onConfirm: _submit,
-                confirmLabel: 'Confirmar',
-              ),
-            ],
-          ),
+    return Form(
+      key: _formKey,
+      child: OmniDialog(
+        title: 'Registrar pago',
+        subtitle: widget.customer.name,
+        icon: LucideIcons.wallet,
+        tone: OmniTone.success,
+        actions: OmniDialogActions(
+          onCancel: () => Navigator.pop(context),
+          onConfirm: _submit,
+          confirmLabel: 'Confirmar',
+          loading: _submitting,
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Text('Deuda actual', style: context.text.label),
+                const Spacer(),
+                Text(
+                  CurrencyFormatter.format(widget.customer.totalDebt,
+                      widget.ref.read(currencyProvider)),
+                  style: context.text.moneyMd
+                      .copyWith(color: context.colors.danger),
+                ),
+              ],
+            ),
+            const SizedBox(height: OmniSpacing.base),
+            OmniTextField(
+              controller: _amountCtrl,
+              label: 'Monto pagado',
+              prefixIcon: LucideIcons.dollarSign,
+              tabularDigits: true,
+              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              inputFormatters: [
+                FilteringTextInputFormatter.allow(RegExp(r'[0-9.]'))
+              ],
+              validator: _validateAmount,
+            ),
+          ],
         ),
       ),
     );
   }
 }
 
-// ── Shared dialog actions row ──────────────────────────────────────────────────
-class _DialogActions extends StatelessWidget {
-  const _DialogActions({
-    required this.onCancel,
-    required this.onConfirm,
-    required this.confirmLabel,
-  });
-  final VoidCallback onCancel;
-  final VoidCallback onConfirm;
-  final String confirmLabel;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Expanded(
-          child: OmniButton(
-            label: 'Cancelar',
-            onPressed: onCancel,
-            variant: OmniButtonVariant.ghost,
-          ),
-        ),
-        const SizedBox(width: OmniSpacing.md),
-        Expanded(
-          child: OmniButton(label: confirmLabel, onPressed: onConfirm),
-        ),
-      ],
-    );
-  }
-}
