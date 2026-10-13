@@ -43,3 +43,13 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Artefactos locales
+/build.nosync/
+/android/build/
+pub_error.txt
+
+# Firma de release de Android (secretos: nunca versionar)
+/android/key.properties
+*.jks
+*.keystore
