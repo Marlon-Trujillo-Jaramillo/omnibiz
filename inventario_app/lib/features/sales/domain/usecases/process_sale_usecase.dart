@@ -1,65 +1,79 @@
 import 'package:inventario_app/core/error/failures.dart';
 import 'package:inventario_app/core/utils/app_logger.dart';
 import 'package:inventario_app/core/utils/app_result.dart';
-import 'package:inventario_app/features/customers/domain/repositories/customer_repository.dart';
-import 'package:inventario_app/features/inventory/domain/repositories/product_repository.dart';
 import 'package:inventario_app/features/sales/domain/entities/sale_entity.dart';
 import 'package:inventario_app/features/sales/domain/repositories/sale_repository.dart';
 
+/// Checkout: valida la venta y la confirma de forma atómica vía
+/// [SaleRepository.commitSale] (stock + deuda + venta en una sola transacción).
 class ProcessSaleUseCase {
-  const ProcessSaleUseCase({
-    required this.saleRepository,
-    required this.productRepository,
-    required this.customerRepository,
-  });
+  const ProcessSaleUseCase({required this.saleRepository});
 
   final SaleRepository saleRepository;
-  final ProductRepository productRepository;
-  final CustomerRepository customerRepository;
 
   static const _tag = 'ProcessSaleUC';
 
   Future<AppResult<SaleEntity>> execute(SaleEntity sale) async {
     AppLogger.i(_tag,
         'execute() total=${sale.totalAmount} method=${sale.paymentMethod} items=${sale.items.length}');
+
+    final invalid = _validate(sale);
+    if (invalid != null) {
+      AppLogger.w(_tag, '  ✗ venta inválida: ${invalid.message}');
+      return AppFailure(invalid);
+    }
+
     try {
-      for (final item in sale.items) {
-        AppLogger.d(_tag,
-            '  → validando stock: "${item.productName}" (id=${item.productId}) qty=${item.quantity}');
-        final product = await productRepository.getById(item.productId);
-        if (product == null) {
-          AppLogger.w(_tag, '  ✗ producto no encontrado id=${item.productId}');
-          return AppFailure(
-            NotFoundFailure('Producto "${item.productName}" no encontrado'),
-          );
-        }
-        if (product.stock < item.quantity) {
-          AppLogger.w(_tag,
-              '  ✗ stock insuficiente: disponible=${product.stock} solicitado=${item.quantity}');
-          return AppFailure(
-            StockFailure(
-              'Stock insuficiente para "${item.productName}". '
-              'Disponible: ${product.stock}, solicitado: ${item.quantity}',
-            ),
-          );
-        }
-        final newStock = product.stock - item.quantity;
-        AppLogger.d(_tag, '  ✓ stock ok, descontando → $newStock');
-        await productRepository.updateStock(item.productId, newStock);
-      }
-
-      if (sale.paymentMethod == 'Fiado' && sale.customerId != null) {
-        AppLogger.i(_tag,
-            'Fiado: sumando ${sale.totalAmount} a cliente id=${sale.customerId}');
-        await customerRepository.updateDebt(sale.customerId!, sale.totalAmount);
-      }
-
-      await saleRepository.save(sale);
-      AppLogger.i(_tag, 'execute() → venta guardada correctamente ✓');
-      return AppSuccess(sale);
+      final saved = await saleRepository.commitSale(_normalize(sale));
+      AppLogger.i(_tag, 'execute() → venta id=${saved.id} guardada ✓');
+      return AppSuccess(saved);
+    } on SaleRejection catch (e) {
+      AppLogger.w(_tag, '  ✗ venta rechazada: ${e.message}');
+      return AppFailure(switch (e) {
+        InsufficientStockRejection() => StockFailure(e.message),
+        ProductNotFoundRejection()   => NotFoundFailure(e.message),
+        InvalidSaleRejection()       => ValidationFailure(e.message),
+      });
     } catch (e, st) {
       AppLogger.e(_tag, 'execute() → excepción inesperada', e, st);
       return AppFailure(DatabaseFailure(e.toString()));
     }
+  }
+
+  ValidationFailure? _validate(SaleEntity sale) {
+    if (sale.storeId <= 0) {
+      return const ValidationFailure('No hay una sucursal seleccionada');
+    }
+    if (sale.items.isEmpty) {
+      return const ValidationFailure('El carrito está vacío');
+    }
+    if (sale.items.any((i) => i.quantity <= 0 || i.unitPrice < 0)) {
+      return const ValidationFailure('Hay productos con cantidad o precio inválido');
+    }
+    if (sale.paymentMethod == PaymentMethods.credit && sale.customerId == null) {
+      return const ValidationFailure('Para vender fiado selecciona un cliente');
+    }
+    return null;
+  }
+
+  /// Recalcula los totales a partir de las líneas: no se confía en el total
+  /// que manda la UI.
+  SaleEntity _normalize(SaleEntity sale) {
+    final items = [
+      for (final i in sale.items)
+        SaleItemEntity(
+          productId:        i.productId,
+          productName:      i.productName,
+          quantity:         i.quantity,
+          unitPrice:        i.unitPrice,
+          totalPrice:       i.unitPrice * i.quantity,
+          selectedVariants: i.selectedVariants,
+        ),
+    ];
+    final subtotal = items.fold(0, (sum, i) => sum + i.totalPrice);
+    return sale.copyWith(
+      items:       items,
+      totalAmount: subtotal + sale.taxAmount - sale.discountAmount,
+    );
   }
 }

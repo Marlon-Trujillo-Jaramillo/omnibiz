@@ -1,3 +1,5 @@
+import 'package:inventario_app/core/utils/app_constants.dart';
+
 class ProductEntity {
   const ProductEntity({
     required this.id,
@@ -17,8 +19,10 @@ class ProductEntity {
   final int id;
   final String name;
   final String category;
-  final double price;
-  final double costPrice;
+  /// Centavos (ver `Money`).
+  final int price;
+  /// Centavos (ver `Money`).
+  final int costPrice;
   final int stock;
   final String sku;
   final List<String> variants;
@@ -27,13 +31,15 @@ class ProductEntity {
   final int storeId;
   final String? barcode;
 
-  bool get isLowStock => stock < 5;
-  bool get isOutOfStock => stock == 0;
+  bool get isLowStock => stock < AppConstants.lowStockThreshold;
+  // `<=`: un stock negativo (datos corruptos/importados) también es agotado.
+  bool get isOutOfStock => stock <= 0;
   double get margin => price > 0 ? (price - costPrice) / price : 0;
-  double get profit => price - costPrice;
+  /// Centavos.
+  int get profit => price - costPrice;
 
   ProductEntity copyWith({
-    int? id, String? name, String? category, double? price, double? costPrice,
+    int? id, String? name, String? category, int? price, int? costPrice,
     int? stock, String? sku, List<String>? variants, DateTime? createdAt,
     DateTime? updatedAt, int? storeId, String? barcode,
   }) {

@@ -9,6 +9,7 @@ import 'package:inventario_app/core/utils/currency_formatter.dart';
 import 'package:inventario_app/features/stores/presentation/providers/stores_notifier.dart';
 import 'package:inventario_app/shared/providers/currency_provider.dart';
 import 'package:inventario_app/shared/providers/current_store_provider.dart';
+import 'package:inventario_app/shared/providers/theme_mode_provider.dart';
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -16,6 +17,7 @@ class SettingsScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final currency      = ref.watch(currencyProvider);
+    final themeMode     = ref.watch(themeModeProvider);
     final currentId     = ref.watch(currentStoreProvider);
     final storesAsync   = ref.watch(storesProvider);
     final currentStore  = storesAsync.valueOrNull
@@ -23,41 +25,110 @@ class SettingsScreen extends ConsumerWidget {
         .firstOrNull;
 
     return Scaffold(
-      backgroundColor: OmniColors.bg,
-      appBar: AppBar(
-        backgroundColor: OmniColors.bg,
-        elevation: 0,
-        title: Text('Configuración', style: OmniTypography.headingMd),
-      ),
+      appBar: AppBar(title: const Text('Configuración')),
       body: OmniResponsiveCenter(
+        maxWidth: OmniBreakpoints.tablet + OmniSpacing.xxxl * 2,
         child: ListView(
-          padding: const EdgeInsets.all(OmniSpacing.base),
+          padding: const EdgeInsets.fromLTRB(
+              OmniSpacing.base, OmniSpacing.sm, OmniSpacing.base, OmniSpacing.xxl),
           children: [
-            _SectionHeader('Sucursales'),
-            const SizedBox(height: OmniSpacing.md),
+            const _SectionHeader('Apariencia'),
+            OmniCard(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Text('Tema', style: context.text.bodyMd
+                      .copyWith(fontWeight: FontWeight.w600)),
+                  const SizedBox(height: OmniSpacing.xxs),
+                  Text('"Sistema" sigue el modo claro/oscuro del dispositivo.',
+                      style: context.text.caption),
+                  const SizedBox(height: OmniSpacing.md),
+                  SegmentedButton<ThemeMode>(
+                    showSelectedIcon: false,
+                    segments: const [
+                      ButtonSegment(
+                        value: ThemeMode.system,
+                        label: Text('Sistema'),
+                        icon: Icon(LucideIcons.monitorSmartphone,
+                            size: OmniSizes.iconSm),
+                      ),
+                      ButtonSegment(
+                        value: ThemeMode.light,
+                        label: Text('Claro'),
+                        icon: Icon(LucideIcons.sun, size: OmniSizes.iconSm),
+                      ),
+                      ButtonSegment(
+                        value: ThemeMode.dark,
+                        label: Text('Oscuro'),
+                        icon: Icon(LucideIcons.moon, size: OmniSizes.iconSm),
+                      ),
+                    ],
+                    selected: {themeMode},
+                    onSelectionChanged: (s) =>
+                        ref.read(themeModeProvider.notifier).setMode(s.first),
+                  ),
+                ],
+              ),
+            ),
+            const _SectionHeader('Sucursal'),
             _StoresTile(
               storeName: currentStore?.name ?? 'Sin sucursal',
               onTap: () => context.push(
                 '${AppRoutes.dashboardBase}/${AppRoutes.stores}',
               ),
             ),
-            const SizedBox(height: OmniSpacing.xxl),
-            _SectionHeader('Moneda del sistema'),
+            const _SectionHeader('Moneda del sistema'),
+            OmniCard(
+              padding: EdgeInsets.zero,
+              child: Column(
+                children: [
+                  for (final (i, c) in AppCurrency.values.indexed) ...[
+                    if (i > 0) const Divider(indent: OmniSpacing.base),
+                    _CurrencyTile(
+                      currency: c,
+                      selected: currency == c,
+                      onTap: () =>
+                          _changeCurrency(context, ref, from: currency, to: c),
+                    ),
+                  ],
+                ],
+              ),
+            ),
             const SizedBox(height: OmniSpacing.md),
-            ...AppCurrency.values.map((c) => _CurrencyTile(
-              currency: c,
-              selected: currency == c,
-              onTap: () => ref.read(currencyProvider.notifier).setCurrency(c),
-            )),
-            const SizedBox(height: OmniSpacing.xxl),
-            _SectionHeader('Vista previa'),
-            const SizedBox(height: OmniSpacing.md),
+            const OmniBanner(
+              tone: OmniTone.warning,
+              message: _currencyWarning,
+            ),
+            const _SectionHeader('Vista previa'),
             _PreviewCard(currency: currency),
           ],
         ),
       ),
     );
   }
+}
+
+/// Los montos se guardan sin moneda (salvo las ventas): cambiarla NO
+/// convierte precios ni deudas, sólo cambia cómo se muestran.
+const _currencyWarning =
+    'Cambiar la moneda no convierte los montos: precios, costos y deudas '
+    'existentes se mostrarán con la nueva moneda sin conversión. Las ventas '
+    'ya registradas conservan la moneda con la que se hicieron.';
+
+Future<void> _changeCurrency(
+  BuildContext context,
+  WidgetRef ref, {
+  required AppCurrency from,
+  required AppCurrency to,
+}) async {
+  if (from == to) return;
+  final ok = await OmniConfirmDialog.show(
+    context,
+    title: 'Cambiar moneda a ${to.code}',
+    body: _currencyWarning,
+    confirmLabel: 'Cambiar',
+  );
+  if (ok) await ref.read(currencyProvider.notifier).setCurrency(to);
 }
 
 // ── Stores tile ────────────────────────────────────────────────────────────────
@@ -68,34 +139,27 @@ class _StoresTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
+    return OmniCard(
       onTap: onTap,
-      borderRadius: OmniRadius.lgAll,
-      child: Container(
-        padding: const EdgeInsets.all(OmniSpacing.base),
-        decoration: BoxDecoration(
-          color: OmniColors.bgSurface,
-          borderRadius: OmniRadius.lgAll,
-          border: Border.all(color: OmniColors.borderSubtle),
-        ),
-        child: Row(
-          children: [
-            OmniIconAvatar(icon: LucideIcons.store, color: OmniColors.primary, size: 40),
-            const SizedBox(width: OmniSpacing.base),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('Sucursal activa', style: OmniTypography.bodySm
-                      .copyWith(color: OmniColors.textSecondary)),
-                  const SizedBox(height: 2),
-                  Text(storeName, style: OmniTypography.bodyMd),
-                ],
-              ),
+      child: Row(
+        children: [
+          const OmniIconAvatar(icon: LucideIcons.store),
+          const SizedBox(width: OmniSpacing.md),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Sucursal activa', style: context.text.caption),
+                const SizedBox(height: OmniSpacing.xxs),
+                Text(storeName,
+                    style: context.text.bodyMd
+                        .copyWith(fontWeight: FontWeight.w600)),
+              ],
             ),
-            const Icon(Icons.chevron_right_rounded, color: OmniColors.textDisabled),
-          ],
-        ),
+          ),
+          Icon(LucideIcons.chevronRight,
+              size: OmniSizes.iconSm, color: context.colors.textMuted),
+        ],
       ),
     );
   }
@@ -107,8 +171,11 @@ class _SectionHeader extends StatelessWidget {
   final String title;
 
   @override
-  Widget build(BuildContext context) =>
-      Text(title, style: OmniTypography.headingMd);
+  Widget build(BuildContext context) => Padding(
+        padding: const EdgeInsets.fromLTRB(
+            OmniSpacing.xs, OmniSpacing.xl, 0, OmniSpacing.sm),
+        child: Text(title.toUpperCase(), style: context.text.overline),
+      );
 }
 
 // ── Currency tile ──────────────────────────────────────────────────────────────
@@ -124,39 +191,37 @@ class _CurrencyTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
+    final c = context.colors;
+    return InkWell(
       onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 150),
-        margin: const EdgeInsets.only(bottom: OmniSpacing.sm),
+      child: Padding(
         padding: const EdgeInsets.all(OmniSpacing.base),
-        decoration: BoxDecoration(
-          color: selected ? OmniColors.primaryBg : OmniColors.bgSurface,
-          borderRadius: OmniRadius.lgAll,
-          border: Border.all(
-            color: selected ? OmniColors.primary : OmniColors.borderSubtle,
-            width: selected ? 1.5 : 1,
-          ),
-        ),
         child: Row(
           children: [
-            Text(currency.flag, style: const TextStyle(fontSize: 24)),
+            Text(currency.flag, style: context.text.headingLg),
             const SizedBox(width: OmniSpacing.base),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(currency.label, style: OmniTypography.bodyMd),
-                  const SizedBox(height: 2),
-                  Text(currency.code,
-                      style: OmniTypography.caption
-                          .copyWith(color: OmniColors.textMuted)),
+                  Text(currency.label, style: context.text.bodyMd),
+                  const SizedBox(height: OmniSpacing.xxs),
+                  Text(currency.code, style: context.text.caption),
                 ],
               ),
             ),
-            if (selected)
-              const Icon(LucideIcons.checkCircle,
-                  color: OmniColors.primary, size: 20),
+            AnimatedSwitcher(
+              duration: OmniMotion.base,
+              child: selected
+                  ? Icon(LucideIcons.checkCircle2,
+                      key: const ValueKey(true),
+                      color: c.primaryText,
+                      size: OmniSizes.iconMd)
+                  : Icon(LucideIcons.circle,
+                      key: const ValueKey(false),
+                      color: c.borderWeak,
+                      size: OmniSizes.iconMd),
+            ),
           ],
         ),
       ),
@@ -171,26 +236,17 @@ class _PreviewCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(OmniSpacing.base),
-      decoration: BoxDecoration(
-        color: OmniColors.bgSurface,
-        borderRadius: OmniRadius.lgAll,
-        border: Border.all(color: OmniColors.borderSubtle),
-      ),
+    return OmniCard(
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Formato de precios', style: OmniTypography.label),
-          const SizedBox(height: OmniSpacing.md),
           _PreviewRow(label: 'Precio pequeño',
-              value: CurrencyFormatter.format(9_990, currency)),
+              value: CurrencyFormatter.format(999_000, currency)),
           _PreviewRow(label: 'Precio mediano',
-              value: CurrencyFormatter.format(125_000, currency)),
+              value: CurrencyFormatter.format(12_500_000, currency)),
           _PreviewRow(label: 'Precio grande',
-              value: CurrencyFormatter.format(1_500_000, currency)),
+              value: CurrencyFormatter.format(150_000_000, currency)),
           _PreviewRow(label: 'Formato compacto',
-              value: CurrencyFormatter.compact(2_500_000, currency)),
+              value: CurrencyFormatter.compact(250_000_000, currency)),
         ],
       ),
     );
@@ -205,16 +261,12 @@ class _PreviewRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: OmniSpacing.sm),
+      padding: const EdgeInsets.symmetric(vertical: OmniSpacing.xs),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(label,
-              style: OmniTypography.bodySm
-                  .copyWith(color: OmniColors.textSecondary)),
-          Text(value,
-              style:
-                  OmniTypography.headingSm.copyWith(color: OmniColors.primary)),
+          Text(label, style: context.text.bodySm),
+          Text(value, style: context.text.moneySm),
         ],
       ),
     );

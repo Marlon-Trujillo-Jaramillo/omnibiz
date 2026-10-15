@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import '../../tokens/omni_colors.dart';
-import '../../tokens/omni_radius.dart';
-import '../../tokens/omni_spacing.dart';
+import '../../theme/omni_theme_extensions.dart';
 import '../../tokens/omni_typography.dart';
+import '../../tokens/omni_sizes.dart';
 
+/// Campo de texto del sistema de diseño. Bordes, relleno y estados vienen del
+/// `inputDecorationTheme` de [OmniTheme] (claro/oscuro).
 class OmniTextField extends StatelessWidget {
   const OmniTextField({
     super.key,
@@ -26,6 +27,8 @@ class OmniTextField extends StatelessWidget {
     this.focusNode,
     this.textInputAction,
     this.initialValue,
+    this.tabularDigits = false,
+    this.helperText,
   });
 
   final TextEditingController? controller;
@@ -46,9 +49,13 @@ class OmniTextField extends StatelessWidget {
   final FocusNode? focusNode;
   final TextInputAction? textInputAction;
   final String? initialValue;
+  /// Cifras tabulares (montos, cantidades, códigos).
+  final bool tabularDigits;
+  final String? helperText;
 
   @override
   Widget build(BuildContext context) {
+    final style = context.text.bodyLg;
     return TextFormField(
       controller: controller,
       initialValue: controller == null ? initialValue : null,
@@ -64,42 +71,15 @@ class OmniTextField extends StatelessWidget {
       onTap: onTap,
       focusNode: focusNode,
       textInputAction: textInputAction,
-      style: OmniTypography.bodyMd.copyWith(color: OmniColors.textPrimary),
+      style: tabularDigits ? style.tabular : style,
       decoration: InputDecoration(
         labelText: label,
         hintText: hint,
-        labelStyle: OmniTypography.caption.copyWith(color: OmniColors.textMuted),
-        hintStyle: OmniTypography.bodyMd.copyWith(color: OmniColors.textDisabled),
-        filled: true,
-        fillColor: OmniColors.borderSubtle,
+        helperText: helperText,
         prefixIcon: prefixIcon != null
-            ? Icon(prefixIcon, color: OmniColors.textMuted, size: 18)
+            ? Icon(prefixIcon, size: OmniSizes.iconSm + 2)
             : null,
-        suffix: suffixWidget,
-        contentPadding: const EdgeInsets.symmetric(
-          horizontal: OmniSpacing.base,
-          vertical: OmniSpacing.md,
-        ),
-        border: OutlineInputBorder(
-          borderRadius: OmniRadius.mdAll,
-          borderSide: BorderSide.none,
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: OmniRadius.mdAll,
-          borderSide: const BorderSide(color: OmniColors.borderSubtle),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: OmniRadius.mdAll,
-          borderSide: const BorderSide(color: OmniColors.primary, width: 1.5),
-        ),
-        errorBorder: OutlineInputBorder(
-          borderRadius: OmniRadius.mdAll,
-          borderSide: const BorderSide(color: OmniColors.danger),
-        ),
-        focusedErrorBorder: OutlineInputBorder(
-          borderRadius: OmniRadius.mdAll,
-          borderSide: const BorderSide(color: OmniColors.danger, width: 1.5),
-        ),
+        suffixIcon: suffixWidget,
       ),
     );
   }

@@ -12,39 +12,37 @@ class POSScreen extends ConsumerWidget {
   const POSScreen({super.key, this.businessContext = 'generic'});
   final String businessContext;
 
-  void _showCheckout(BuildContext context, WidgetRef ref) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (_) => Padding(
-        padding: EdgeInsets.only(
-          bottom: MediaQuery.of(context).viewInsets.bottom,
-        ),
-        child: CheckoutSheet(businessContext: businessContext),
-      ),
+  void _showCheckout(BuildContext context) {
+    showOmniSheet(
+      context,
+      builder: (_) => CheckoutSheet(businessContext: businessContext),
     );
   }
 
-  void _showCartSheet(BuildContext context, WidgetRef ref) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: OmniColors.bgModal,
-      shape: const RoundedRectangleBorder(
-        borderRadius:
-            BorderRadius.vertical(top: Radius.circular(OmniRadius.xl)),
-      ),
-      builder: (_) => DraggableScrollableSheet(
+  void _showCartSheet(BuildContext context) {
+    showOmniSheet(
+      context,
+      builder: (sheetCtx) => DraggableScrollableSheet(
         expand: false,
-        initialChildSize: 0.65,
+        initialChildSize: 0.75,
         minChildSize: 0.4,
-        maxChildSize: 0.9,
-        builder: (_, __) => CartPanel(
-          onCheckout: () {
-            Navigator.pop(context);
-            _showCheckout(context, ref);
-          },
+        maxChildSize: 0.95,
+        builder: (_, scroll) => Column(
+          children: [
+            const Padding(
+              padding: EdgeInsets.only(top: OmniSpacing.md),
+              child: OmniDragHandle(),
+            ),
+            Expanded(
+              child: CartPanel(
+                scrollController: scroll,
+                onCheckout: () {
+                  Navigator.pop(sheetCtx);
+                  _showCheckout(context);
+                },
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -52,25 +50,22 @@ class POSScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final isWide     = context.isTablet;
-    final cartCount  = ref.watch(cartProvider.select((s) => s.itemCount));
+    final isWide = context.isTablet;
+    final cartCount = ref.watch(cartProvider.select((s) => s.itemCount));
 
     return Scaffold(
-      backgroundColor: OmniColors.bg,
       appBar: AppBar(
-        backgroundColor: OmniColors.bg,
-        elevation: 0,
-        title: Text('Terminal POS', style: OmniTypography.headingMd),
+        title: const Text('Terminal POS'),
         actions: [
           if (!isWide)
             Padding(
-              padding: const EdgeInsets.only(right: OmniSpacing.base),
+              padding: const EdgeInsets.only(right: OmniSpacing.sm),
               child: OmniBadge(
                 count: cartCount,
                 child: IconButton(
-                  icon: const Icon(LucideIcons.shoppingCart,
-                      color: OmniColors.textSecondary),
-                  onPressed: () => _showCartSheet(context, ref),
+                  tooltip: 'Ver orden',
+                  icon: const Icon(LucideIcons.shoppingBag),
+                  onPressed: () => _showCartSheet(context),
                 ),
               ),
             ),
@@ -79,51 +74,119 @@ class POSScreen extends ConsumerWidget {
       body: isWide
           ? Row(
               children: [
-                const Expanded(flex: 3, child: ProductSearchAndGrid()),
-                const VerticalDivider(
-                    width: 1, color: OmniColors.borderSubtle),
-                Expanded(
-                  flex: 2,
-                  child: CartPanel(
-                    onCheckout: () => _showCheckout(context, ref),
+                const Expanded(child: ProductSearchAndGrid()),
+                Container(
+                  width: OmniSizes.hairline,
+                  color: context.colors.borderSubtle,
+                ),
+                SizedBox(
+                  width: (context.screenWidth * 0.38).clamp(
+                    320.0,
+                    OmniSizes.sidePanel + OmniSpacing.xxxl,
                   ),
+                  child: CartPanel(onCheckout: () => _showCheckout(context)),
                 ),
               ],
             )
           : const ProductSearchAndGrid(),
       bottomNavigationBar: isWide
           ? null
-          : SafeArea(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(
-                  OmniSpacing.base,
-                  OmniSpacing.sm,
-                  OmniSpacing.base,
-                  OmniSpacing.md,
-                ),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Consumer(builder: (_, ref, __) {
-                        final total =
-                            ref.watch(cartProvider.select((s) => s.total));
-                        return Text(
-                          'Total: ${ref.formatMoney(total)}',
-                          style: OmniTypography.headingMd,
-                        );
-                      }),
+          : _MobileCheckoutBar(
+              count: cartCount,
+              onOpenCart: () => _showCartSheet(context),
+              onCheckout: () => _showCheckout(context),
+            ),
+    );
+  }
+}
+
+/// Barra inferior en móvil: resumen de la orden + "Cobrar".
+class _MobileCheckoutBar extends ConsumerWidget {
+  const _MobileCheckoutBar({
+    required this.count,
+    required this.onOpenCart,
+    required this.onCheckout,
+  });
+
+  final int count;
+  final VoidCallback onOpenCart;
+  final VoidCallback onCheckout;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final c = context.colors;
+    final total = ref.watch(cartProvider.select((s) => s.total));
+    return Container(
+      decoration: BoxDecoration(
+        color: c.bgSurface,
+        border: Border(top: BorderSide(color: c.borderSubtle)),
+        boxShadow: c.floatingShadow,
+      ),
+      child: SafeArea(
+        top: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(
+            OmniSpacing.base,
+            OmniSpacing.md,
+            OmniSpacing.base,
+            OmniSpacing.md,
+          ),
+          child: Row(
+            children: [
+              Expanded(
+                child: InkWell(
+                  onTap: onOpenCart,
+                  borderRadius: OmniRadius.mdAll,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      vertical: OmniSpacing.xs,
+                      horizontal: OmniSpacing.xs,
                     ),
-                    OmniButton(
-                      label: 'Cobrar',
-                      onPressed: cartCount > 0
-                          ? () => _showCheckout(context, ref)
-                          : null,
-                      icon: LucideIcons.creditCard,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Text(
+                              count == 0
+                                  ? 'Orden vacía'
+                                  : '$count artículo${count == 1 ? '' : 's'}',
+                              style: context.text.label.tabular,
+                            ),
+                            const SizedBox(width: OmniSpacing.xs),
+                            Icon(
+                              LucideIcons.chevronUp,
+                              size: OmniSizes.iconXs,
+                              color: c.textMuted,
+                            ),
+                          ],
+                        ),
+                        FittedBox(
+                          fit: BoxFit.scaleDown,
+                          alignment: Alignment.centerLeft,
+                          child: Text(
+                            ref.formatMoney(total),
+                            style: context.text.priceLg,
+                          ),
+                        ),
+                      ],
                     ),
-                  ],
+                  ),
                 ),
               ),
-            ),
+              const SizedBox(width: OmniSpacing.md),
+              OmniButton(
+                label: 'Cobrar',
+                variant: OmniButtonVariant.brand,
+                size: OmniButtonSize.lg,
+                onPressed: count > 0 ? onCheckout : null,
+                icon: LucideIcons.wallet,
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

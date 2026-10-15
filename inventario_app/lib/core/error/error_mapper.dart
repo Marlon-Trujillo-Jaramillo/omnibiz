@@ -7,12 +7,6 @@ abstract final class ErrorMapper {
         ValidationFailure(:final message) => message,
         NotFoundFailure() =>
           'El registro no fue encontrado.',
-        NetworkFailure() =>
-          'Sin conexión. Verifica tu red e intenta de nuevo.',
-        UnauthorizedFailure() =>
-          'No tienes permiso para realizar esta acción.',
         StockFailure(:final message) => message,
-        UnexpectedFailure() =>
-          'Ocurrió un error inesperado. Intenta de nuevo.',
       };
 }

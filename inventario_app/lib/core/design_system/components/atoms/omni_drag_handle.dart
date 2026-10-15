@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
-import '../../tokens/omni_colors.dart';
+import '../../theme/omni_theme_extensions.dart';
 import '../../tokens/omni_radius.dart';
 import '../../tokens/omni_spacing.dart';
 
-/// Standard drag handle shown at the top of bottom sheets.
+/// Asa de arrastre estándar en la parte superior de los bottom sheets.
 class OmniDragHandle extends StatelessWidget {
   const OmniDragHandle({super.key});
 
@@ -11,10 +11,10 @@ class OmniDragHandle extends StatelessWidget {
   Widget build(BuildContext context) {
     return Center(
       child: Container(
-        width: OmniSpacing.xxxl,
+        width: OmniSpacing.xxl + OmniSpacing.sm,
         height: OmniSpacing.xs,
         decoration: BoxDecoration(
-          color: OmniColors.borderWeak,
+          color: context.colors.borderWeak,
           borderRadius: OmniRadius.fullAll,
         ),
       ),

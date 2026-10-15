@@ -1,4 +1,14 @@
-enum AppCurrency { cop, usd }
+enum AppCurrency {
+  cop,
+  usd;
+
+  /// Moneda a partir de su código ISO guardado en una venta. Códigos
+  /// desconocidos caen en COP (la moneda por defecto de la app).
+  static AppCurrency fromCode(String? code) => AppCurrency.values.firstWhere(
+    (c) => c.code == code,
+    orElse: () => AppCurrency.cop,
+  );
+}
 
 extension AppCurrencyExt on AppCurrency {
   String get code => switch (this) {

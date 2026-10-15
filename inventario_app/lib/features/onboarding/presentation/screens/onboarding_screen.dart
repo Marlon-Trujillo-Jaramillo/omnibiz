@@ -15,59 +15,64 @@ class OnboardingScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final c = context.colors;
     return Scaffold(
-      backgroundColor: OmniColors.bg,
       body: SafeArea(
         child: OmniResponsiveCenter(
-        child: Padding(
-          padding: const EdgeInsets.all(OmniSpacing.xl),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+          maxWidth: OmniBreakpoints.tablet,
+          child: ListView(
+            padding: const EdgeInsets.all(OmniSpacing.xl),
             children: [
-              const SizedBox(height: OmniSpacing.xxxl),
-              Text('Bienvenido a', style: OmniTypography.bodyLg.copyWith(color: OmniColors.textSecondary)),
-              const SizedBox(height: OmniSpacing.xs),
-              Text('OmniBiz', style: OmniTypography.displayLg),
+              const SizedBox(height: OmniSpacing.xxl),
+              Container(
+                width: OmniSizes.avatarLg,
+                height: OmniSizes.avatarLg,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  gradient: c.brandGradient,
+                  borderRadius: OmniRadius.lgAll,
+                  boxShadow: c.glow(c.primary),
+                ),
+                child: Icon(LucideIcons.zap,
+                    color: c.onPrimary, size: OmniSizes.iconLg + 4),
+              ),
+              const SizedBox(height: OmniSpacing.xl),
+              Text('Bienvenido a', style: context.text.bodyLg
+                  .copyWith(color: c.textSecondary)),
+              Text('OmniBiz', style: context.text.displayLg),
               const SizedBox(height: OmniSpacing.sm),
               Text(
-                'La solución inteligente para gestionar\ntu negocio de forma profesional.',
-                style: OmniTypography.bodySm,
+                'Vende, controla tu inventario y lleva el fiado de tus clientes, todo en un solo lugar.',
+                style: context.text.bodyMd.copyWith(color: c.textSecondary),
               ),
-              const SizedBox(height: OmniSpacing.xxxl),
-              Text('Selecciona tu tipo de negocio', style: OmniTypography.headingMd),
-              const SizedBox(height: OmniSpacing.xl),
-              Expanded(
-                child: ListView(
-                  children: [
-                    _BusinessCard(
-                      title: 'Tienda de Ropa / Retail',
-                      subtitle: 'Gestión de tallas, colores y variantes de stock.',
-                      icon: LucideIcons.shirt,
-                      color: OmniColors.purple,
-                      onTap: () => _selectType(context, ref, 'retail'),
-                    ),
-                    const SizedBox(height: OmniSpacing.base),
-                    _BusinessCard(
-                      title: 'Restaurante / Bar',
-                      subtitle: 'Control de mesas, barra e ingredientes.',
-                      icon: LucideIcons.utensils,
-                      color: OmniColors.orange,
-                      onTap: () => _selectType(context, ref, 'fnb'),
-                    ),
-                    const SizedBox(height: OmniSpacing.base),
-                    _BusinessCard(
-                      title: 'Otro Local Comercial',
-                      subtitle: 'Puntos de venta rápidos y servicios.',
-                      icon: LucideIcons.store,
-                      color: OmniColors.blue,
-                      onTap: () => _selectType(context, ref, 'generic'),
-                    ),
-                  ],
-                ),
+              const SizedBox(height: OmniSpacing.xxl),
+              Text('¿QUÉ TIPO DE NEGOCIO TIENES?', style: context.text.overline),
+              const SizedBox(height: OmniSpacing.md),
+              _BusinessCard(
+                title: 'Tienda de ropa / Retail',
+                subtitle: 'Gestión de tallas, colores y variantes de stock.',
+                icon: LucideIcons.shirt,
+                color: c.purple,
+                onTap: () => _selectType(context, ref, 'retail'),
+              ),
+              const SizedBox(height: OmniSpacing.md),
+              _BusinessCard(
+                title: 'Restaurante / Bar',
+                subtitle: 'Control de mesas, barra e ingredientes.',
+                icon: LucideIcons.utensils,
+                color: c.orange,
+                onTap: () => _selectType(context, ref, 'fnb'),
+              ),
+              const SizedBox(height: OmniSpacing.md),
+              _BusinessCard(
+                title: 'Otro local comercial',
+                subtitle: 'Puntos de venta rápidos y servicios.',
+                icon: LucideIcons.store,
+                color: c.info,
+                onTap: () => _selectType(context, ref, 'generic'),
               ),
             ],
           ),
-        ),
         ),
       ),
     );
@@ -91,33 +96,26 @@ class _BusinessCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
+    return OmniCard(
       onTap: onTap,
-      borderRadius: OmniRadius.lgAll,
-      child: Container(
-        padding: const EdgeInsets.all(OmniSpacing.lg),
-        decoration: BoxDecoration(
-          color: OmniColors.bgSurface,
-          borderRadius: OmniRadius.lgAll,
-          border: Border.all(color: OmniColors.borderSubtle),
-        ),
-        child: Row(
-          children: [
-            OmniIconAvatar(icon: icon, color: color, size: 52),
-            const SizedBox(width: OmniSpacing.base),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(title, style: OmniTypography.headingSm),
-                  const SizedBox(height: OmniSpacing.xs),
-                  Text(subtitle, style: OmniTypography.bodySm),
-                ],
-              ),
+      padding: const EdgeInsets.all(OmniSpacing.lg),
+      child: Row(
+        children: [
+          OmniIconAvatar(icon: icon, color: color, size: OmniSizes.avatarLg),
+          const SizedBox(width: OmniSpacing.base),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(title, style: context.text.headingSm),
+                const SizedBox(height: OmniSpacing.xs),
+                Text(subtitle, style: context.text.bodySm),
+              ],
             ),
-            const Icon(Icons.chevron_right_rounded, color: OmniColors.textDisabled),
-          ],
-        ),
+          ),
+          Icon(LucideIcons.chevronRight,
+              size: OmniSizes.iconMd, color: context.colors.textMuted),
+        ],
       ),
     );
   }

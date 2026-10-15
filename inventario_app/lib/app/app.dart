@@ -4,6 +4,7 @@ import 'package:inventario_app/core/design_system/design_system.dart';
 import 'package:inventario_app/core/globals.dart';
 import 'package:inventario_app/core/utils/app_constants.dart';
 import 'package:inventario_app/features/auth/presentation/providers/auth_notifier.dart';
+import 'package:inventario_app/shared/providers/theme_mode_provider.dart';
 import 'router/app_router.dart';
 
 class OmniBizApp extends ConsumerStatefulWidget {
@@ -62,7 +63,9 @@ class _OmniBizAppState extends ConsumerState<OmniBizApp>
       scaffoldMessengerKey: scaffoldMessengerKey,
       theme: OmniTheme.light(),
       darkTheme: OmniTheme.dark(),
-      themeMode: ThemeMode.dark,
+      themeMode: ref.watch(themeModeProvider),
+      themeAnimationDuration: OmniMotion.slow,
+      themeAnimationCurve: OmniMotion.standard,
       routerConfig: router,
     );
   }

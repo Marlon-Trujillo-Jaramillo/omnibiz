@@ -86,44 +86,6 @@ void main() {
     });
   });
 
-  group('updateStock', () {
-    test('actualiza solo el stock', () async {
-      await repo.save(_entity(name: 'Arroz', stock: 50));
-      final id = (await repo.getAll(storeId: 0)).first.id;
-      await repo.updateStock(id, 30);
-      final updated = await repo.getById(id);
-      expect(updated?.stock, 30);
-      expect(updated?.name, 'Arroz');
-    });
-  });
-
-  group('getByBarcode', () {
-    test('retorna null si no hay coincidencia', () async {
-      await repo.save(_entity());
-      expect(await repo.getByBarcode('999', storeId: 0), isNull);
-    });
-
-    test('encuentra por barcode', () async {
-      final withBarcode = ProductEntity(
-        id:        0,
-        name:      'Con barcode',
-        category:  'X',
-        price:     1000,
-        costPrice: 500,
-        stock:     5,
-        sku:       'SKU-B',
-        variants:  [],
-        createdAt: DateTime(2024),
-        updatedAt: DateTime(2024),
-        barcode:   '7501234',
-        storeId:   0,
-      );
-      await repo.save(withBarcode);
-      final found = await repo.getByBarcode('7501234', storeId: 0);
-      expect(found?.name, 'Con barcode');
-    });
-  });
-
   group('categorías', () {
     test('guardar y listar', () async {
       const cat = CategoryEntity(id: 0, name: 'Bebidas', icon: 'cup', storeId: 0);

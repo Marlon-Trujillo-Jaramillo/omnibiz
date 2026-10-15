@@ -1,11 +1,12 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:inventario_app/core/utils/app_constants.dart';
 import 'package:inventario_app/features/inventory/domain/entities/product_entity.dart';
 
 ProductEntity _product({
   int id = 1,
   String name = 'Café',
-  double price = 5000,
-  double costPrice = 3000,
+  int price = 5000,
+  int costPrice = 3000,
   int stock = 10,
 }) =>
     ProductEntity(
@@ -24,13 +25,15 @@ ProductEntity _product({
 
 void main() {
   group('ProductEntity.isLowStock', () {
-    test('false cuando stock >= 5', () {
-      expect(_product(stock: 5).isLowStock, false);
-      expect(_product(stock: 10).isLowStock, false);
+    const threshold = AppConstants.lowStockThreshold;
+
+    test('false cuando stock >= umbral', () {
+      expect(_product(stock: threshold).isLowStock, false);
+      expect(_product(stock: threshold + 5).isLowStock, false);
     });
 
-    test('true cuando stock < 5', () {
-      expect(_product(stock: 4).isLowStock, true);
+    test('true cuando stock < umbral', () {
+      expect(_product(stock: threshold - 1).isLowStock, true);
       expect(_product(stock: 0).isLowStock, true);
     });
   });
@@ -42,6 +45,10 @@ void main() {
 
     test('true cuando stock == 0', () {
       expect(_product(stock: 0).isOutOfStock, true);
+    });
+
+    test('true cuando stock es negativo', () {
+      expect(_product(stock: -2).isOutOfStock, true);
     });
   });
 

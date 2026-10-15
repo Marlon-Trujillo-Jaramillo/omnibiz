@@ -17,8 +17,10 @@ class Product {
   final int id;
   final String name;
   final String category;
-  final double price;
-  final double costPrice;
+  /// Centavos.
+  final int price;
+  /// Centavos.
+  final int costPrice;
   final int stock;
   final String sku;
   final String? barcode;
@@ -26,9 +28,6 @@ class Product {
   final DateTime createdAt;
   final DateTime updatedAt;
   final int storeId;
-
-  bool get isLowStock => stock < 5;
-  double get margin => price > 0 ? (price - costPrice) / price : 0;
 
   Map<String, dynamic> toMap() => {
         'name': name,
@@ -48,8 +47,8 @@ class Product {
         id: id,
         name: map['name'] as String,
         category: map['category'] as String,
-        price: (map['price'] as num).toDouble(),
-        costPrice: (map['costPrice'] as num).toDouble(),
+        price: map['price'] as int,
+        costPrice: map['costPrice'] as int,
         stock: map['stock'] as int,
         sku: map['sku'] as String,
         barcode: map['barcode'] as String?,

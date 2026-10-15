@@ -27,9 +27,9 @@ class CustomersNotifier extends AsyncNotifier<List<CustomerEntity>> {
     AppLogger.i(_tag, 'add() → ok');
   }
 
-  Future<void> registerPayment(int customerId, double amount) async {
+  Future<void> registerPayment(int customerId, int amount) async {
     AppLogger.i(_tag, 'registerPayment(id=$customerId, amount=$amount)');
-    await ref.read(customerRepositoryProvider).updateDebt(customerId, -amount);
+    await ref.read(customerRepositoryProvider).registerPayment(customerId, amount);
     ref.invalidateSelf();
     AppLogger.i(_tag, 'registerPayment() → ok');
   }

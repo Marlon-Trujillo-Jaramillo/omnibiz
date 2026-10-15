@@ -7,6 +7,7 @@ import 'package:inventario_app/core/error/failures.dart';
 import 'package:inventario_app/features/auth/presentation/providers/auth_notifier.dart';
 import 'package:inventario_app/shared/providers/business_type_provider.dart';
 import 'package:inventario_app/features/auth/presentation/screens/lock_screen.dart';
+import 'package:inventario_app/features/auth/presentation/screens/splash_screen.dart';
 import 'package:inventario_app/features/customers/presentation/screens/customers_screen.dart';
 import 'package:inventario_app/features/dashboard/presentation/screens/dashboard_screen.dart';
 import 'package:inventario_app/features/inventory/presentation/providers/products_notifier.dart';
@@ -31,8 +32,9 @@ final routerProvider = Provider<GoRouter>((ref) {
       final loc  = state.matchedLocation;
 
       switch (auth.status) {
+        // Mientras se lee el almacenamiento seguro nada es accesible.
         case AuthStatus.initial:
-          return null;
+          return loc == AppRoutes.splash ? null : AppRoutes.splash;
         case AuthStatus.noPinSet:
           if (loc == AppRoutes.authSetup) return null;
           return AppRoutes.authSetup;
@@ -40,7 +42,9 @@ final routerProvider = Provider<GoRouter>((ref) {
           if (loc == AppRoutes.auth) return null;
           return AppRoutes.auth;
         case AuthStatus.authenticated:
-          if (loc == AppRoutes.auth || loc == AppRoutes.authSetup) {
+          if (loc == AppRoutes.auth ||
+              loc == AppRoutes.authSetup ||
+              loc == AppRoutes.splash) {
             final type = ref.read(businessTypeProvider);
             return type != null
                 ? AppRoutes.dashboardTyped(type)
@@ -50,6 +54,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       }
     },
     routes: [
+      GoRoute(
+        path: AppRoutes.splash,
+        builder: (_, __) => const SplashScreen(),
+      ),
       GoRoute(
         path: AppRoutes.auth,
         builder: (_, __) => const LockScreen(),
@@ -140,12 +148,8 @@ class _EditProductScreen extends ConsumerWidget {
     if (productId == null) return const AddProductScreen();
     final productsAsync = ref.watch(productsProvider);
     return productsAsync.when(
-      loading: () => const Scaffold(
-        backgroundColor: OmniColors.bg,
-        body: Center(child: CircularProgressIndicator(color: OmniColors.primary)),
-      ),
+      loading: () => const Scaffold(body: OmniSkeletonList(count: 5)),
       error: (e, _) => Scaffold(
-        backgroundColor: OmniColors.bg,
         body: OmniErrorState(
           message: e is Failure
               ? ErrorMapper.toMessage(e)

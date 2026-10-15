@@ -18,18 +18,6 @@ final class NotFoundFailure extends Failure {
   const NotFoundFailure([super.message = 'Registro no encontrado']);
 }
 
-final class NetworkFailure extends Failure {
-  const NetworkFailure([super.message = 'Error de conexión']);
-}
-
-final class UnauthorizedFailure extends Failure {
-  const UnauthorizedFailure([super.message = 'No autorizado']);
-}
-
 final class StockFailure extends Failure {
   const StockFailure(super.message);
-}
-
-final class UnexpectedFailure extends Failure {
-  const UnexpectedFailure([super.message = 'Error inesperado']);
 }

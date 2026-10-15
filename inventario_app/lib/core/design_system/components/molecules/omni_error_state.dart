@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
+import '../../theme/omni_theme_extensions.dart';
 import '../../tokens/omni_colors.dart';
 import '../../tokens/omni_spacing.dart';
-import '../../tokens/omni_typography.dart';
 import '../atoms/omni_button.dart';
+import 'omni_empty_state.dart';
 
 class OmniErrorState extends StatelessWidget {
   const OmniErrorState({
@@ -20,43 +21,38 @@ class OmniErrorState extends StatelessWidget {
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(OmniSpacing.xxl),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(OmniSpacing.xl),
-              decoration: const BoxDecoration(
-                color: OmniColors.dangerBg,
-                shape: BoxShape.circle,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 360),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const OmniStateIllustration(
+                icon: LucideIcons.cloudOff,
+                tone: OmniTone.danger,
               ),
-              child: const Icon(
-                LucideIcons.alertTriangle,
-                size: 40,
-                color: OmniColors.danger,
-              ),
-            ),
-            const SizedBox(height: OmniSpacing.xl),
-            Text(
-              'Algo salió mal',
-              style: OmniTypography.headingSm,
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: OmniSpacing.sm),
-            Text(
-              message,
-              style: OmniTypography.bodySm,
-              textAlign: TextAlign.center,
-            ),
-            if (onRetry != null) ...[
               const SizedBox(height: OmniSpacing.xl),
-              OmniButton(
-                label: 'Reintentar',
-                icon: LucideIcons.refreshCw,
-                onPressed: onRetry,
-                variant: OmniButtonVariant.secondary,
+              Text(
+                'Algo salió mal',
+                style: context.text.headingMd,
+                textAlign: TextAlign.center,
               ),
+              const SizedBox(height: OmniSpacing.sm),
+              Text(
+                message,
+                style: context.text.bodySm,
+                textAlign: TextAlign.center,
+              ),
+              if (onRetry != null) ...[
+                const SizedBox(height: OmniSpacing.xl),
+                OmniButton(
+                  label: 'Reintentar',
+                  icon: LucideIcons.refreshCw,
+                  onPressed: onRetry,
+                  variant: OmniButtonVariant.secondary,
+                ),
+              ],
             ],
-          ],
+          ),
         ),
       ),
     );

@@ -52,53 +52,22 @@ class _QuantityDialogState extends State<_QuantityDialog> {
 
   @override
   Widget build(BuildContext context) {
-    return Dialog(
-      backgroundColor: OmniColors.bgModal,
-      shape: RoundedRectangleBorder(borderRadius: OmniRadius.xlAll),
-      child: Padding(
-        padding: const EdgeInsets.all(OmniSpacing.xl),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('Cantidad', style: OmniTypography.headingMd),
-            const SizedBox(height: OmniSpacing.xs),
-            Text(
-              widget.productName,
-              style: OmniTypography.bodySm.copyWith(color: OmniColors.textMuted),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-            const SizedBox(height: OmniSpacing.base),
-            OmniTextField(
-              controller: _controller,
-              keyboardType: TextInputType.number,
-              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-              autofocus: true,
-              textInputAction: TextInputAction.done,
-              onSubmitted: (_) => _submit(),
-            ),
-            const SizedBox(height: OmniSpacing.xl),
-            Row(
-              children: [
-                Expanded(
-                  child: OmniButton(
-                    label: 'Cancelar',
-                    onPressed: () => Navigator.pop(context),
-                    variant: OmniButtonVariant.ghost,
-                  ),
-                ),
-                const SizedBox(width: OmniSpacing.md),
-                Expanded(
-                  child: OmniButton(
-                    label: widget.confirmLabel,
-                    onPressed: _submit,
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
+    return OmniDialog(
+      title: 'Cantidad',
+      subtitle: widget.productName,
+      actions: OmniDialogActions(
+        onCancel: () => Navigator.pop(context),
+        onConfirm: _submit,
+        confirmLabel: widget.confirmLabel,
+      ),
+      child: OmniTextField(
+        controller: _controller,
+        keyboardType: TextInputType.number,
+        inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+        autofocus: true,
+        tabularDigits: true,
+        textInputAction: TextInputAction.done,
+        onSubmitted: (_) => _submit(),
       ),
     );
   }

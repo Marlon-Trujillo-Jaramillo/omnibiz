@@ -20,33 +20,35 @@ class _AnalyticsData {
     required this.topProducts,
     required this.debtTotal,
     required this.debtCustomers,
+    required this.debtCount,
   });
 
-  final double todayTotal;
-  final double weekTotal;
-  final double monthTotal;
-  final double avgTicket;
+  // Montos en centavos.
+  final int todayTotal;
+  final int weekTotal;
+  final int monthTotal;
+  final int avgTicket;
   final int totalSales;
-  final List<({String name, int quantity, double revenue})> topProducts;
-  final double debtTotal;
+  final List<({String name, int quantity, int revenue})> topProducts;
+  final int debtTotal;
   final List<CustomerEntity> debtCustomers;
+  /// Total de clientes con saldo (no sólo los 5 que se listan).
+  final int debtCount;
 
+  /// [sales] = ventas de los últimos 30 días (ver [_monthRange]).
   factory _AnalyticsData.from(
       List<SaleEntity> sales, List<CustomerEntity> customers) {
-    final now     = DateTime.now();
-    final today   = DateTime(now.year, now.month, now.day);
-    final weekAgo = now.subtract(const Duration(days: 7));
-    final monthAgo = now.subtract(const Duration(days: 30));
+    final now      = DateTime.now();
+    final today    = lastDaysRange(1, now: now).from;
+    final weekFrom = lastDaysRange(7, now: now).from;
 
-    double todayTotal = 0, weekTotal = 0, monthTotal = 0;
-    final Map<String, ({int qty, double rev})> productMap = {};
+    int todayTotal = 0, weekTotal = 0, monthTotal = 0;
+    final Map<String, ({int qty, int rev})> productMap = {};
 
     for (final sale in sales) {
-      final saleDay = DateTime(
-          sale.createdAt.year, sale.createdAt.month, sale.createdAt.day);
-      if (saleDay == today) todayTotal += sale.totalAmount;
-      if (sale.createdAt.isAfter(weekAgo)) weekTotal += sale.totalAmount;
-      if (sale.createdAt.isAfter(monthAgo)) monthTotal += sale.totalAmount;
+      if (!sale.createdAt.isBefore(today)) todayTotal += sale.totalAmount;
+      if (!sale.createdAt.isBefore(weekFrom)) weekTotal += sale.totalAmount;
+      monthTotal += sale.totalAmount;
       _accumulateProducts(sale.items, productMap);
     }
 
@@ -57,33 +59,35 @@ class _AnalyticsData {
       todayTotal:    todayTotal,
       weekTotal:     weekTotal,
       monthTotal:    monthTotal,
-      avgTicket:     sales.isEmpty ? 0.0 : monthTotal / sales.length,
+      avgTicket:     sales.isEmpty ? 0 : (monthTotal / sales.length).round(),
       totalSales:    sales.length,
       topProducts:   topProducts,
-      debtTotal:     debtCustomers.fold(0.0, (s, c) => s + c.totalDebt),
+      debtTotal:     debtCustomers.fold(0, (s, c) => s + c.totalDebt),
       debtCustomers: debtCustomers.take(5).toList(),
+      debtCount:     debtCustomers.length,
     );
   }
 
   static void _accumulateProducts(
       List<SaleItemEntity> items,
-      Map<String, ({int qty, double rev})> map) {
+      Map<String, ({int qty, int rev})> map) {
     for (final item in items) {
       final existing = map[item.productName];
       map[item.productName] = (
         qty: (existing?.qty ?? 0) + item.quantity,
-        rev: (existing?.rev ?? 0.0) + item.totalPrice,
+        rev: (existing?.rev ?? 0) + item.totalPrice,
       );
     }
   }
 
-  static List<({String name, int quantity, double revenue})> _buildTopProducts(
-      Map<String, ({int qty, double rev})> map) {
-    return map.entries
+  static List<({String name, int quantity, int revenue})> _buildTopProducts(
+      Map<String, ({int qty, int rev})> map) {
+    final sorted = map.entries
         .map((e) => (name: e.key, quantity: e.value.qty, revenue: e.value.rev))
         .toList()
-      ..sort((a, b) => b.quantity.compareTo(a.quantity))
-      ..take(5);
+      ..sort((a, b) => b.quantity.compareTo(a.quantity));
+    // Antes: `..take(5)` en cascada no recortaba nada (devolvía todos).
+    return sorted.take(5).toList();
   }
 
   static List<CustomerEntity> _buildDebtCustomers(
@@ -94,8 +98,11 @@ class _AnalyticsData {
 }
 
 // ── Provider ───────────────────────────────────────────────────────────────────
+SalesRange _monthRange() => lastDaysRange(30);
+
 final _analyticsProvider = Provider.autoDispose<_AnalyticsData>((ref) {
-  final sales     = ref.watch(salesProvider).valueOrNull ?? [];
+  final sales     =
+      ref.watch(salesInRangeProvider(_monthRange())).valueOrNull ?? [];
   final customers = ref.watch(customersProvider).valueOrNull ?? [];
   return _AnalyticsData.from(sales, customers);
 });
@@ -107,268 +114,331 @@ class AnalyticsScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final data = ref.watch(_analyticsProvider);
+    final salesAsync = ref.watch(salesInRangeProvider(_monthRange()));
+    final loading = salesAsync.isLoading && !salesAsync.hasValue;
 
-    return Scaffold(
-      backgroundColor: OmniColors.bg,
-      appBar: AppBar(
-        backgroundColor: OmniColors.bg,
-        elevation: 0,
-        title: Text('Analytics', style: OmniTypography.headingMd),
-      ),
-      body: RefreshIndicator(
+    Widget body;
+    if (salesAsync.hasError && !salesAsync.hasValue) {
+      body = OmniErrorState(
+        message: 'No se pudieron cargar las ventas.',
+        onRetry: () => ref.invalidate(salesInRangeProvider),
+      );
+    } else {
+      body = RefreshIndicator(
         onRefresh: () async {
-          ref.invalidate(salesProvider);
+          ref.invalidate(salesInRangeProvider);
           ref.invalidate(customersProvider);
         },
-        child: ListView(
-          padding: const EdgeInsets.all(OmniSpacing.base),
-          children: [
-            _SectionTitle('Resumen de ventas'),
-            const SizedBox(height: OmniSpacing.md),
-            _KpiGrid(data: data),
-            const SizedBox(height: OmniSpacing.xl),
-            _SectionTitle('Ventas (últimos 7 días)'),
-            const SizedBox(height: OmniSpacing.md),
-            const SalesChart(),
-            const SizedBox(height: OmniSpacing.xl),
-            _SectionTitle('Top 5 productos más vendidos'),
-            const SizedBox(height: OmniSpacing.md),
-            _TopProductsList(products: data.topProducts),
-            if (data.debtCustomers.isNotEmpty) ...[
-              const SizedBox(height: OmniSpacing.xl),
-              _SectionTitle('Deudas de clientes'),
+        child: OmniResponsiveCenter(
+          maxWidth: OmniBreakpoints.desktop + OmniSpacing.xxxl * 4,
+          child: ListView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: const EdgeInsets.fromLTRB(OmniSpacing.base, OmniSpacing.sm,
+                OmniSpacing.base, OmniSpacing.xxl),
+            children: [
+              Text('RESUMEN · 30 DÍAS', style: context.text.overline),
               const SizedBox(height: OmniSpacing.md),
-              _DebtSummaryCard(data: data),
-              const SizedBox(height: OmniSpacing.md),
-              ...data.debtCustomers.map((c) => _DebtTile(c)),
+              loading
+                  ? const _KpiSkeleton()
+                  : _KpiGrid(data: data),
               const SizedBox(height: OmniSpacing.xl),
+              const SalesChart(),
+              const SizedBox(height: OmniSpacing.xl),
+              LayoutBuilder(builder: (_, constraints) {
+                final top = _Panel(
+                  title: 'Más vendidos',
+                  subtitle: 'Top 5 por unidades · 30 días',
+                  icon: LucideIcons.trophy,
+                  child: loading
+                      ? const OmniSkeletonList(count: 3, padding: EdgeInsets.zero)
+                      : _TopProductsList(products: data.topProducts),
+                );
+                final debts = _Panel(
+                  title: 'Cuentas por cobrar',
+                  subtitle: data.debtCount == 0
+                      ? 'Nadie debe nada'
+                      : '${data.debtCount} cliente${data.debtCount == 1 ? '' : 's'} con saldo',
+                  icon: LucideIcons.notebookPen,
+                  child: _DebtSection(data: data),
+                );
+                if (constraints.maxWidth >= OmniBreakpoints.desktop) {
+                  return Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(child: top),
+                      const SizedBox(width: OmniSpacing.base),
+                      Expanded(child: debts),
+                    ],
+                  );
+                }
+                return Column(children: [
+                  top,
+                  const SizedBox(height: OmniSpacing.base),
+                  debts,
+                ]);
+              }),
             ],
-          ],
+          ),
         ),
+      );
+    }
+
+    return Scaffold(
+      appBar: AppBar(title: const Text('Analytics')),
+      body: body,
+    );
+  }
+}
+
+class _Panel extends StatelessWidget {
+  const _Panel({
+    required this.title,
+    required this.subtitle,
+    required this.icon,
+    required this.child,
+  });
+  final String title;
+  final String subtitle;
+  final IconData icon;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return OmniCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          OmniSectionHeader(
+            leading: OmniIconAvatar(icon: icon, size: OmniSizes.avatarSm),
+            title: title,
+            subtitle: subtitle,
+          ),
+          const SizedBox(height: OmniSpacing.base),
+          child,
+        ],
       ),
     );
   }
 }
 
 // ── KPI Grid ───────────────────────────────────────────────────────────────────
+List<Widget> _wrapGrid(BoxConstraints constraints, List<Widget> items) {
+  final cols = constraints.maxWidth >= OmniBreakpoints.tablet ? 4 : 2;
+  const gap = OmniSpacing.md;
+  final w = (constraints.maxWidth - gap * (cols - 1)) / cols;
+  return [for (final i in items) SizedBox(width: w, child: i)];
+}
+
+class _KpiSkeleton extends StatelessWidget {
+  const _KpiSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (_, constraints) => OmniShimmer(
+        child: Wrap(
+          spacing: OmniSpacing.md,
+          runSpacing: OmniSpacing.md,
+          children: _wrapGrid(constraints, [
+            for (var i = 0; i < 4; i++)
+              const OmniSkeleton(
+                  height: OmniSizes.avatarXl + OmniSpacing.xxl,
+                  radius: OmniRadius.lg),
+          ]),
+        ),
+      ),
+    );
+  }
+}
+
 class _KpiGrid extends ConsumerWidget {
   const _KpiGrid({required this.data});
   final _AnalyticsData data;
 
-  static const _kpiCount = 4;
-
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final c = context.colors;
+    final items = [
+      OmniStatCard(
+        title: 'Hoy',
+        value: ref.formatMoneyCompact(data.todayTotal),
+        icon: LucideIcons.sun,
+        color: c.success,
+      ),
+      OmniStatCard(
+        title: '7 días',
+        value: ref.formatMoneyCompact(data.weekTotal),
+        icon: LucideIcons.calendarDays,
+        color: c.info,
+      ),
+      OmniStatCard(
+        title: '30 días',
+        value: ref.formatMoneyCompact(data.monthTotal),
+        icon: LucideIcons.trendingUp,
+      ),
+      OmniStatCard(
+        title: 'Ticket promedio',
+        value: ref.formatMoneyCompact(data.avgTicket),
+        icon: LucideIcons.shoppingBag,
+        color: c.purple,
+        subtitle: '${data.totalSales} ventas en 30 días',
+      ),
+    ];
     return LayoutBuilder(
-      builder: (_, constraints) {
-        final cols = constraints.maxWidth >= OmniBreakpoints.desktop
-            ? _kpiCount
-            : 2;
-        final items = _buildKpis(data, ref);
-        return GridView.builder(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: cols,
-            crossAxisSpacing: OmniSpacing.sm,
-            mainAxisSpacing: OmniSpacing.sm,
-            childAspectRatio: 1.3,
-          ),
-          itemCount: items.length,
-          itemBuilder: (_, i) => items[i],
-        );
-      },
+      builder: (_, constraints) => Wrap(
+        spacing: OmniSpacing.md,
+        runSpacing: OmniSpacing.md,
+        children: _wrapGrid(constraints, items),
+      ),
     );
   }
-
-  List<Widget> _buildKpis(_AnalyticsData d, WidgetRef ref) => [
-    OmniStatCard(
-      title: 'Hoy',
-      value: ref.formatMoneyCompact(d.todayTotal),
-      icon: LucideIcons.sun,
-      color: OmniColors.success,
-    ),
-    OmniStatCard(
-      title: '7 días',
-      value: ref.formatMoneyCompact(d.weekTotal),
-      icon: LucideIcons.calendar,
-      color: OmniColors.primary,
-    ),
-    OmniStatCard(
-      title: '30 días',
-      value: ref.formatMoneyCompact(d.monthTotal),
-      icon: LucideIcons.trendingUp,
-      color: OmniColors.warning,
-    ),
-    OmniStatCard(
-      title: 'Ticket prom.',
-      value: ref.formatMoneyCompact(d.avgTicket),
-      icon: LucideIcons.shoppingBag,
-      color: OmniColors.primary,
-      subtitle: '${d.totalSales} ventas totales',
-    ),
-  ];
 }
 
 // ── Top products ───────────────────────────────────────────────────────────────
-class _TopProductsList extends StatelessWidget {
+class _TopProductsList extends ConsumerWidget {
   const _TopProductsList({required this.products});
-  final List<({String name, int quantity, double revenue})> products;
-
-  @override
-  Widget build(BuildContext context) {
-    if (products.isEmpty) {
-      return Text(
-        'Sin datos de ventas',
-        style: OmniTypography.bodySm.copyWith(color: OmniColors.textMuted),
-      );
-    }
-    return Column(
-      children: products.asMap().entries
-          .map((e) => _TopProductTile(rank: e.key + 1, entry: e.value))
-          .toList(),
-    );
-  }
-}
-
-class _TopProductTile extends ConsumerWidget {
-  const _TopProductTile({required this.rank, required this.entry});
-  final int rank;
-  final ({String name, int quantity, double revenue}) entry;
+  final List<({String name, int quantity, int revenue})> products;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final isFirst = rank == 1;
-    return Container(
-      margin: const EdgeInsets.only(bottom: OmniSpacing.sm),
-      padding: const EdgeInsets.symmetric(
-        horizontal: OmniSpacing.base,
-        vertical: OmniSpacing.md,
-      ),
-      decoration: BoxDecoration(
-        color: OmniColors.bgSurface,
-        borderRadius: OmniRadius.mdAll,
-        border: Border.all(color: OmniColors.borderSubtle),
-      ),
-      child: Row(
-        children: [
-          _RankBadge(rank: rank, highlighted: isFirst),
-          const SizedBox(width: OmniSpacing.md),
-          Expanded(child: _TopProductInfo(entry: entry)),
-          Text(
-            ref.formatMoneyCompact(entry.revenue),
-            style: OmniTypography.headingSm.copyWith(
-              color: OmniColors.primary,
+    final c = context.colors;
+    if (products.isEmpty) {
+      return const OmniEmptyState(
+        compact: true,
+        icon: LucideIcons.barChart3,
+        title: 'Sin datos de ventas',
+        subtitle: 'Cuando vendas, aquí verás tus productos estrella.',
+      );
+    }
+    final maxQty = products.first.quantity;
+    return Column(
+      children: [
+        for (final (i, p) in products.indexed)
+          Padding(
+            padding: const EdgeInsets.only(bottom: OmniSpacing.md),
+            child: Column(
+              children: [
+                Row(
+                  children: [
+                    _RankBadge(rank: i + 1),
+                    const SizedBox(width: OmniSpacing.md),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(p.name,
+                              style: context.text.bodyMd
+                                  .copyWith(fontWeight: FontWeight.w600),
+                              overflow: TextOverflow.ellipsis),
+                          Text('${p.quantity} unidades',
+                              style: context.text.caption.tabular),
+                        ],
+                      ),
+                    ),
+                    Text(ref.formatMoneyCompact(p.revenue),
+                        style: context.text.moneySm),
+                  ],
+                ),
+                const SizedBox(height: OmniSpacing.sm),
+                ClipRRect(
+                  borderRadius: OmniRadius.fullAll,
+                  child: LinearProgressIndicator(
+                    value: maxQty == 0 ? 0 : p.quantity / maxQty,
+                    minHeight: OmniSpacing.xs + 2,
+                    color: i == 0 ? c.primary : c.primary.withAlpha(140),
+                  ),
+                ),
+              ],
             ),
           ),
-        ],
-      ),
-    );
-  }
-}
-
-class _RankBadge extends StatelessWidget {
-  const _RankBadge({required this.rank, required this.highlighted});
-  final int rank;
-  final bool highlighted;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: OmniSpacing.xxl - OmniSpacing.xs,
-      height: OmniSpacing.xxl - OmniSpacing.xs,
-      alignment: Alignment.center,
-      decoration: BoxDecoration(
-        color: highlighted
-            ? OmniColors.warningBg
-            : OmniColors.borderSubtle,
-        shape: BoxShape.circle,
-      ),
-      child: Text(
-        '#$rank',
-        style: OmniTypography.caption.copyWith(
-          color: highlighted ? OmniColors.warning : OmniColors.textSecondary,
-          fontWeight: FontWeight.bold,
-        ),
-      ),
-    );
-  }
-}
-
-class _TopProductInfo extends StatelessWidget {
-  const _TopProductInfo({required this.entry});
-  final ({String name, int quantity, double revenue}) entry;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(entry.name, style: OmniTypography.bodyMd),
-        const SizedBox(height: 2),
-        Text(
-          '${entry.quantity} unidades vendidas',
-          style: OmniTypography.caption.copyWith(color: OmniColors.textMuted),
-        ),
       ],
     );
   }
 }
 
-// ── Debt summary ───────────────────────────────────────────────────────────────
-class _DebtSummaryCard extends ConsumerWidget {
-  const _DebtSummaryCard({required this.data});
+class _RankBadge extends StatelessWidget {
+  const _RankBadge({required this.rank});
+  final int rank;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.colors;
+    final first = rank == 1;
+    return Container(
+      width: OmniSizes.avatarSm - OmniSpacing.xs,
+      height: OmniSizes.avatarSm - OmniSpacing.xs,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        gradient: first ? c.brandGradient : null,
+        color: first ? null : c.bgRaised,
+        shape: BoxShape.circle,
+      ),
+      child: Text(
+        '$rank',
+        style: context.text.label.copyWith(
+          color: first ? c.onPrimary : c.textSecondary,
+          fontWeight: FontWeight.w700,
+        ).tabular,
+      ),
+    );
+  }
+}
+
+// ── Debts ──────────────────────────────────────────────────────────────────────
+class _DebtSection extends ConsumerWidget {
+  const _DebtSection({required this.data});
   final _AnalyticsData data;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return OmniStatCard(
-      title: 'Deuda total',
-      value: ref.formatMoney(data.debtTotal),
-      icon: LucideIcons.alertCircle,
-      color: OmniColors.danger,
-      subtitle: '${data.debtCustomers.length} clientes con saldo',
+    final c = context.colors;
+    if (data.debtCustomers.isEmpty) {
+      return const OmniEmptyState(
+        compact: true,
+        icon: LucideIcons.checkCircle2,
+        title: 'Todo al día',
+        subtitle: 'No hay ventas fiadas pendientes.',
+      );
+    }
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Container(
+          padding: const EdgeInsets.all(OmniSpacing.base),
+          decoration: BoxDecoration(
+            color: c.dangerBg,
+            borderRadius: OmniRadius.mdAll,
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Deuda total',
+                  style: context.text.label.copyWith(color: c.danger)),
+              const SizedBox(height: OmniSpacing.xxs),
+              Text(ref.formatMoney(data.debtTotal),
+                  style: context.text.priceLg.copyWith(color: c.danger)),
+            ],
+          ),
+        ),
+        const SizedBox(height: OmniSpacing.md),
+        for (final cust in data.debtCustomers)
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: OmniSpacing.xs + 2),
+            child: Row(
+              children: [
+                OmniAvatar(name: cust.name, radius: OmniSizes.avatarSm / 2),
+                const SizedBox(width: OmniSpacing.md),
+                Expanded(
+                  child: Text(cust.name,
+                      style: context.text.bodyMd,
+                      overflow: TextOverflow.ellipsis),
+                ),
+                Text(ref.formatMoney(cust.totalDebt),
+                    style: context.text.moneySm.copyWith(color: c.danger)),
+              ],
+            ),
+          ),
+      ],
     );
   }
-}
-
-class _DebtTile extends ConsumerWidget {
-  const _DebtTile(this.customer);
-  final CustomerEntity customer;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: OmniSpacing.sm),
-      padding: const EdgeInsets.all(OmniSpacing.base),
-      decoration: BoxDecoration(
-        color: OmniColors.bgSurface,
-        borderRadius: OmniRadius.mdAll,
-        border: Border.all(color: OmniColors.borderSubtle),
-      ),
-      child: Row(
-        children: [
-          OmniAvatar(name: customer.name),
-          const SizedBox(width: OmniSpacing.md),
-          Expanded(
-            child: Text(customer.name, style: OmniTypography.bodyMd),
-          ),
-          Text(
-            ref.formatMoney(customer.totalDebt),
-            style: OmniTypography.headingSm.copyWith(color: OmniColors.danger),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// ── Shared ─────────────────────────────────────────────────────────────────────
-class _SectionTitle extends StatelessWidget {
-  const _SectionTitle(this.title);
-  final String title;
-
-  @override
-  Widget build(BuildContext context) =>
-      Text(title, style: OmniTypography.headingMd);
 }

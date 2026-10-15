@@ -1,5 +1,6 @@
 abstract final class AppRoutes {
   // ── Rutas raíz ───────────────────────────────────────────────────────────────
+  static const splash     = '/splash';
   static const auth       = '/auth';
   static const authSetup  = '/auth/setup';
   static const onboarding = '/onboarding';

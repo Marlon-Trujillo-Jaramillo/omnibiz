@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:inventario_app/features/inventory/domain/entities/product_entity.dart';
 import 'package:inventario_app/features/sales/domain/entities/sale_entity.dart';
+import 'package:inventario_app/shared/providers/current_store_provider.dart';
 
 // ── Session state ──────────────────────────────────────────────────────────────
 
@@ -25,7 +26,8 @@ class PosSessionState {
     );
   }
 
-  double get total    => items.fold(0.0, (sum, i) => sum + i.totalPrice);
+  /// Centavos.
+  int    get total    => items.fold(0,   (sum, i) => sum + i.totalPrice);
   int    get itemCount => items.fold(0,   (sum, i) => sum + i.quantity);
 }
 
@@ -37,8 +39,13 @@ final cartProvider =
 // ── Notifier ───────────────────────────────────────────────────────────────────
 
 class CartNotifier extends Notifier<PosSessionState> {
+  /// El carrito pertenece a una sucursal: al cambiar de sucursal se vacía
+  /// (sus productos/cliente no existen en la otra).
   @override
-  PosSessionState build() => const PosSessionState();
+  PosSessionState build() {
+    ref.watch(currentStoreProvider);
+    return const PosSessionState();
+  }
 
   void addProduct(ProductEntity product, {List<String> variants = const []}) {
     final idx = state.items.indexWhere((i) => i.productId == product.id);

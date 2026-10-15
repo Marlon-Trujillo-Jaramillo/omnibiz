@@ -1,45 +1,86 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import '../../theme/omni_theme_extensions.dart';
+import '../../tokens/omni_typography.dart';
 import '../../tokens/omni_colors.dart';
 import '../../tokens/omni_radius.dart';
+import '../../tokens/omni_sizes.dart';
 import '../../tokens/omni_spacing.dart';
-import '../../tokens/omni_typography.dart';
 
+/// Chip de filtro seleccionable (categorías, períodos, métodos de pago).
 class OmniSelectableChip extends StatelessWidget {
   const OmniSelectableChip({
     super.key,
     required this.label,
     required this.selected,
     required this.onTap,
-    this.color = OmniColors.primary,
+    this.icon,
+    this.count,
   });
 
   final String label;
   final bool selected;
   final VoidCallback onTap;
-  final Color color;
+  final IconData? icon;
+  /// Contador opcional a la derecha (p. ej. productos por categoría).
+  final int? count;
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 150),
-        padding: const EdgeInsets.symmetric(
-          horizontal: OmniSpacing.md,
-          vertical: OmniSpacing.xs,
-        ),
-        decoration: BoxDecoration(
-          color: selected ? color.withAlpha(30) : OmniColors.borderSubtle,
+    final c = context.colors;
+    final fg = selected ? c.onPrimary : c.textSecondary;
+    return Semantics(
+      selected: selected,
+      button: true,
+      child: Material(
+        color: OmniPalette.transparent,
+        child: InkWell(
+          onTap: () {
+            HapticFeedback.selectionClick();
+            onTap();
+          },
           borderRadius: OmniRadius.fullAll,
-          border: Border.all(
-            color: selected ? color.withAlpha(80) : OmniColors.borderSubtle,
-          ),
-        ),
-        child: Text(
-          label,
-          style: OmniTypography.caption.copyWith(
-            color: selected ? color : OmniColors.textMuted,
-            fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
+          child: AnimatedContainer(
+            duration: OmniMotion.base,
+            curve: OmniMotion.standard,
+            height: OmniSizes.controlSm,
+            padding: const EdgeInsets.symmetric(horizontal: OmniSpacing.md + 2),
+            decoration: BoxDecoration(
+              color: selected ? c.primary : c.bgSurface,
+              borderRadius: OmniRadius.fullAll,
+              border: Border.all(
+                color: selected ? c.primary : c.borderMuted,
+              ),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (icon != null) ...[
+                  Icon(icon, size: OmniSizes.iconSm - 2, color: fg),
+                  const SizedBox(width: OmniSpacing.xs + 2),
+                ],
+                Text(
+                  label,
+                  style: context.text.label.copyWith(
+                    color: fg,
+                    fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
+                  ),
+                ),
+                if (count != null) ...[
+                  const SizedBox(width: OmniSpacing.xs + 2),
+                  Text(
+                    '$count',
+                    style: context.text.caption
+                        .copyWith(
+                          color: selected
+                              ? c.onPrimary.withAlpha(190)
+                              : c.textMuted,
+                        )
+                        .tabular,
+                  ),
+                ],
+              ],
+            ),
           ),
         ),
       ),
@@ -47,46 +88,42 @@ class OmniSelectableChip extends StatelessWidget {
   }
 }
 
+/// Chip eliminable (variantes de un producto).
 class OmniInputChip extends StatelessWidget {
   const OmniInputChip({
     super.key,
     required this.label,
     required this.onDelete,
-    this.color = OmniColors.primary,
   });
 
   final String label;
   final VoidCallback onDelete;
-  final Color color;
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     return Container(
-      padding: const EdgeInsets.only(
-        left: OmniSpacing.md,
-        right: OmniSpacing.xs,
-        top: OmniSpacing.xs,
-        bottom: OmniSpacing.xs,
-      ),
+      padding: const EdgeInsets.only(left: OmniSpacing.md),
       decoration: BoxDecoration(
-        color: color.withAlpha(20),
+        color: c.primaryBg,
         borderRadius: OmniRadius.fullAll,
-        border: Border.all(color: color.withAlpha(40)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
           Text(
             label,
-            style: OmniTypography.caption.copyWith(
-              color: color,
-              fontWeight: FontWeight.w500,
+            style: context.text.label.copyWith(
+              color: c.primaryText,
+              fontWeight: FontWeight.w600,
             ),
           ),
-          const SizedBox(width: OmniSpacing.xs),
-          GestureDetector(
-            onTap: onDelete,
-            child: Icon(Icons.close, color: color, size: OmniSpacing.base - 2),
+          IconButton(
+            onPressed: onDelete,
+            tooltip: 'Quitar $label',
+            visualDensity: VisualDensity.compact,
+            icon: Icon(Icons.close_rounded,
+                color: c.primaryText, size: OmniSizes.iconSm),
           ),
         ],
       ),

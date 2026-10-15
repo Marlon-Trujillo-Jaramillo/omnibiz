@@ -20,25 +20,33 @@ void main() {
     });
   });
 
-  group('FormValidators.positiveNumber', () {
+  group('FormValidators.money', () {
     test('cero retorna error', () {
-      expect(FormValidators.positiveNumber('0'), isNotNull);
+      expect(FormValidators.money('0'), isNotNull);
     });
 
     test('negativo retorna error', () {
-      expect(FormValidators.positiveNumber('-5'), isNotNull);
+      expect(FormValidators.money('-5'), isNotNull);
     });
 
     test('texto retorna error', () {
-      expect(FormValidators.positiveNumber('abc'), isNotNull);
+      expect(FormValidators.money('abc'), isNotNull);
     });
 
     test('positivo válido retorna null', () {
-      expect(FormValidators.positiveNumber('10.5'), isNull);
+      expect(FormValidators.money('10.5'), isNull);
     });
 
     test('vacío retorna error', () {
-      expect(FormValidators.positiveNumber(''), isNotNull);
+      expect(FormValidators.money(''), isNotNull);
+    });
+
+    test('más de dos decimales retorna error', () {
+      expect(FormValidators.money('10.555'), isNotNull);
+    });
+
+    test('allowZero acepta cero', () {
+      expect(FormValidators.money('0', 'Costo', true), isNull);
     });
   });
 

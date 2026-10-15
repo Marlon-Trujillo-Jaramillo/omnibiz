@@ -24,17 +24,15 @@ class SalesHistoryScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final salesAsync = ref.watch(salesProvider);
     final period     = ref.watch(_periodProvider);
     final method     = ref.watch(_methodFilterProvider);
+    // Filtros aplicados en la consulta: se pagina sobre el resultado filtrado.
+    final query      = (from: _periodStart(period), paymentMethod: method);
+    final provider   = salesHistoryProvider(query);
+    final salesAsync = ref.watch(provider);
 
     return Scaffold(
-      backgroundColor: OmniColors.bg,
-      appBar: AppBar(
-        backgroundColor: OmniColors.bg,
-        elevation: 0,
-        title: Text('Historial de ventas', style: OmniTypography.headingMd),
-      ),
+      appBar: AppBar(title: const Text('Historial de ventas')),
       body: Column(
         children: [
           _FilterBar(period: period, method: method),
@@ -45,20 +43,21 @@ class SalesHistoryScreen extends ConsumerWidget {
                 message: e is Failure
                     ? ErrorMapper.toMessage(e)
                     : 'Error al cargar el historial.',
-                onRetry: () => ref.invalidate(salesProvider),
+                onRetry: () => ref.invalidate(provider),
               ),
-              data: (sales) {
-                final filtered = _applyFilters(sales, period, method);
+              data: (history) {
                 return RefreshIndicator(
-                  onRefresh: () => ref.refresh(salesProvider.future),
-                  color: OmniColors.primary,
-                  backgroundColor: OmniColors.bgSurface,
-                  child: filtered.isEmpty
+                  onRefresh: () => ref.refresh(provider.future),
+                  child: history.sales.isEmpty
                       ? ListView(
                           physics: const AlwaysScrollableScrollPhysics(),
                           children: [_EmptyHistory(period: period)],
                         )
-                      : _SalesList(sales: filtered),
+                      : _SalesList(
+                          history: history,
+                          onLoadMore: () =>
+                              ref.read(provider.notifier).loadMore(),
+                        ),
                 );
               },
             ),
@@ -68,31 +67,14 @@ class SalesHistoryScreen extends ConsumerWidget {
     );
   }
 
-  static List<SaleEntity> _applyFilters(
-      List<SaleEntity> sales, _Period period, String? method) {
-    final now   = DateTime.now();
-    final today = DateTime(now.year, now.month, now.day);
-
-    final filtered = sales.where((s) {
-      if (!_matchesPeriod(s, period, today, now)) return false;
-      if (method != null && s.paymentMethod != method) return false;
-      return true;
-    }).toList();
-
-    filtered.sort((a, b) => b.createdAt.compareTo(a.createdAt));
-    return filtered;
-  }
-
-  static bool _matchesPeriod(
-      SaleEntity sale, _Period period, DateTime today, DateTime now) {
-    return switch (period) {
-      _Period.all   => true,
-      _Period.today => DateTime(sale.createdAt.year, sale.createdAt.month,
-              sale.createdAt.day) == today,
-      _Period.week  => sale.createdAt.isAfter(now.subtract(const Duration(days: 7))),
-      _Period.month => sale.createdAt.isAfter(now.subtract(const Duration(days: 30))),
-    };
-  }
+  /// Inicio (inclusivo) del período en días calendario; null = todo.
+  /// Medianoche → clave de provider estable durante el día.
+  static DateTime? _periodStart(_Period period) => switch (period) {
+        _Period.all   => null,
+        _Period.today => lastDaysRange(1).from,
+        _Period.week  => lastDaysRange(7).from,
+        _Period.month => lastDaysRange(30).from,
+      };
 }
 
 // ── Filter bar ─────────────────────────────────────────────────────────────────
@@ -102,32 +84,39 @@ class _FilterBar extends ConsumerWidget {
   final String? method;
 
   static const _periods = [
-    (label: 'Todos',  value: _Period.all),
+    (label: 'Todo',   value: _Period.all),
     (label: 'Hoy',    value: _Period.today),
-    (label: 'Semana', value: _Period.week),
-    (label: 'Mes',    value: _Period.month),
+    (label: '7 días', value: _Period.week),
+    (label: '30 días', value: _Period.month),
   ];
 
-  static const _methods = ['Efectivo', 'Tarjeta', 'Fiado'];
+  static const _methods = PaymentMethods.all;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return Container(
-      padding: const EdgeInsets.fromLTRB(
-        OmniSpacing.base, OmniSpacing.md, OmniSpacing.base, 0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _ChipRow(
-            children: _periods.map((p) => OmniSelectableChip(
-              label: p.label,
-              selected: period == p.value,
-              onTap: () =>
-                  ref.read(_periodProvider.notifier).state = p.value,
-            )).toList(),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(
+              OmniSpacing.base, OmniSpacing.xs, OmniSpacing.base, 0),
+          child: SegmentedButton<_Period>(
+            showSelectedIcon: false,
+            segments: [
+              for (final p in _periods)
+                ButtonSegment(value: p.value, label: Text(p.label)),
+            ],
+            selected: {period},
+            onSelectionChanged: (s) =>
+                ref.read(_periodProvider.notifier).state = s.first,
           ),
-          const SizedBox(height: OmniSpacing.sm),
-          _ChipRow(
+        ),
+        SizedBox(
+          height: OmniSizes.controlSm + OmniSpacing.xl,
+          child: ListView(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(
+                horizontal: OmniSpacing.base, vertical: OmniSpacing.md),
             children: [
               OmniSelectableChip(
                 label: 'Todos los métodos',
@@ -135,51 +124,102 @@ class _FilterBar extends ConsumerWidget {
                 onTap: () =>
                     ref.read(_methodFilterProvider.notifier).state = null,
               ),
-              ..._methods.map((m) => OmniSelectableChip(
-                label: m,
-                selected: method == m,
-                onTap: () =>
-                    ref.read(_methodFilterProvider.notifier).state = m,
-              )),
+              for (final m in _methods) ...[
+                const SizedBox(width: OmniSpacing.sm),
+                OmniSelectableChip(
+                  label: m,
+                  icon: _methodIcon(m),
+                  selected: method == m,
+                  onTap: () =>
+                      ref.read(_methodFilterProvider.notifier).state = m,
+                ),
+              ],
             ],
           ),
-          const SizedBox(height: OmniSpacing.md),
-          const Divider(color: OmniColors.borderSubtle, height: 1),
-        ],
-      ),
+        ),
+        const Divider(),
+      ],
     );
   }
 }
 
-class _ChipRow extends StatelessWidget {
-  const _ChipRow({required this.children});
-  final List<Widget> children;
+IconData _methodIcon(String method) => switch (method) {
+      PaymentMethods.card   => LucideIcons.creditCard,
+      PaymentMethods.credit => LucideIcons.notebookPen,
+      _                     => LucideIcons.banknote,
+    };
 
-  @override
-  Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      child: Row(
-        children: children
-            .expand((c) => [c, const SizedBox(width: OmniSpacing.sm)])
-            .toList(),
-      ),
-    );
-  }
+OmniTone _methodTone(String method) => switch (method) {
+      PaymentMethods.card   => OmniTone.info,
+      PaymentMethods.credit => OmniTone.warning,
+      _                     => OmniTone.success,
+    };
+
+String _dayLabel(DateTime d) {
+  final today = lastDaysRange(1).from;
+  final day = DateTime(d.year, d.month, d.day);
+  if (day == today) return 'Hoy';
+  if (day == DateTime(today.year, today.month, today.day - 1)) return 'Ayer';
+  return DateFormatter.date(d);
 }
 
 // ── Sales list ─────────────────────────────────────────────────────────────────
-class _SalesList extends StatelessWidget {
-  const _SalesList({required this.sales});
-  final List<SaleEntity> sales;
+class _SalesList extends ConsumerWidget {
+  const _SalesList({required this.history, required this.onLoadMore});
+  final SalesHistoryState history;
+  final VoidCallback onLoadMore;
 
   @override
-  Widget build(BuildContext context) {
-    return ListView.separated(
-      padding: const EdgeInsets.all(OmniSpacing.base),
-      itemCount: sales.length,
-      separatorBuilder: (_, __) => const SizedBox(height: OmniSpacing.sm),
-      itemBuilder: (_, i) => _SaleTile(sales[i]),
+  Widget build(BuildContext context, WidgetRef ref) {
+    final sales = history.sales;
+    // Filas: encabezado de día cuando cambia la fecha + ventas.
+    final rows = <Object>[];
+    String? lastDay;
+    for (final s in sales) {
+      final day = _dayLabel(s.createdAt);
+      if (day != lastDay) {
+        rows.add(day);
+        lastDay = day;
+      }
+      rows.add(s);
+    }
+
+    return OmniResponsiveCenter(
+      child: ListView.builder(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.fromLTRB(
+            OmniSpacing.base, OmniSpacing.sm, OmniSpacing.base, OmniSpacing.xxl),
+        itemCount: rows.length + (history.hasMore ? 1 : 0),
+        itemBuilder: (_, i) {
+          if (i == rows.length) {
+            return Padding(
+              padding: const EdgeInsets.only(top: OmniSpacing.md),
+              child: OmniButton(
+                label: 'Cargar más',
+                icon: LucideIcons.chevronsDown,
+                variant: OmniButtonVariant.secondary,
+                fullWidth: true,
+                loading: history.isLoadingMore,
+                onPressed: history.isLoadingMore ? null : onLoadMore,
+              ),
+            );
+          }
+          final row = rows[i];
+          if (row is String) {
+            return Padding(
+              padding: EdgeInsets.only(
+                  top: i == 0 ? OmniSpacing.sm : OmniSpacing.lg,
+                  bottom: OmniSpacing.sm,
+                  left: OmniSpacing.xs),
+              child: Text(row.toUpperCase(), style: context.text.overline),
+            );
+          }
+          return Padding(
+            padding: const EdgeInsets.only(bottom: OmniSpacing.sm),
+            child: _SaleTile(row as SaleEntity),
+          );
+        },
+      ),
     );
   }
 }
@@ -206,84 +246,51 @@ class _SaleTile extends ConsumerWidget {
   const _SaleTile(this.sale);
   final SaleEntity sale;
 
-  static IconData _methodIcon(String method) => switch (method) {
-        'Tarjeta' => LucideIcons.creditCard,
-        'Fiado'   => LucideIcons.userCheck,
-        _         => LucideIcons.banknote,
-      };
-
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return GestureDetector(
-      onTap: () => _showDetail(context),
-      child: Container(
-        padding: const EdgeInsets.all(OmniSpacing.base),
-        decoration: BoxDecoration(
-          color: OmniColors.bgSurface,
-          borderRadius: OmniRadius.mdAll,
-          border: Border.all(color: OmniColors.borderSubtle),
-        ),
-        child: Row(
-          children: [
-            OmniIconAvatar(
-              icon: _methodIcon(sale.paymentMethod),
-              color: OmniColors.primary,
-              size: 40,
-            ),
-            const SizedBox(width: OmniSpacing.md),
-            Expanded(child: _SaleTileInfo(sale: sale)),
-            Text(
-              ref.formatMoney(sale.totalAmount),
-              style: OmniTypography.headingSm.copyWith(
-                color: OmniColors.primary,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  void _showDetail(BuildContext context) {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: OmniColors.bgModal,
-      shape: const RoundedRectangleBorder(
-        borderRadius:
-            BorderRadius.vertical(top: Radius.circular(OmniRadius.xl)),
-      ),
-      builder: (_) => _SaleDetailSheet(sale),
-    );
-  }
-}
-
-class _SaleTileInfo extends StatelessWidget {
-  const _SaleTileInfo({required this.sale});
-  final SaleEntity sale;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Ticket #${sale.id}',
-          style: OmniTypography.bodyMd.copyWith(fontWeight: FontWeight.bold),
-        ),
-        const SizedBox(height: 2),
-        Text(
-          DateFormatter.dateTime(sale.createdAt),
-          style: OmniTypography.caption.copyWith(
-            color: OmniColors.textSecondary,
+    final c = context.colors;
+    final tone = _methodTone(sale.paymentMethod);
+    return OmniCard(
+      onTap: () => showOmniSheet(context, builder: (_) => _SaleDetailSheet(sale)),
+      padding: const EdgeInsets.all(OmniSpacing.md),
+      child: Row(
+        children: [
+          OmniIconAvatar(
+            icon: _methodIcon(sale.paymentMethod),
+            color: c.toneFg(tone),
+            size: OmniSizes.avatarMd,
           ),
-        ),
-        const SizedBox(height: 2),
-        Text(
-          '${sale.itemCount} artículo${sale.itemCount != 1 ? 's' : ''} '
-          '· ${sale.paymentMethod}',
-          style: OmniTypography.caption.copyWith(color: OmniColors.textMuted),
-        ),
-      ],
+          const SizedBox(width: OmniSpacing.md),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Ticket #${sale.id}',
+                    style: context.text.bodyMd
+                        .copyWith(fontWeight: FontWeight.w600)
+                        .tabular),
+                const SizedBox(height: OmniSpacing.xxs),
+                Text(
+                  '${DateFormatter.time(sale.createdAt)} · '
+                  '${sale.itemCount} artículo${sale.itemCount != 1 ? 's' : ''}',
+                  style: context.text.caption.tabular,
+                ),
+              ],
+            ),
+          ),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text(
+                ref.formatSaleMoney(sale.totalAmount, sale.currencyCode),
+                style: context.text.moneyMd,
+              ),
+              const SizedBox(height: OmniSpacing.xxs),
+              OmniTag(label: sale.paymentMethod, tone: tone, dense: true),
+            ],
+          ),
+        ],
+      ),
     );
   }
 }
@@ -295,116 +302,72 @@ class _SaleDetailSheet extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return OmniResponsiveCenter(
-      maxWidth: OmniBreakpoints.tablet,
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(
-          OmniSpacing.xl, OmniSpacing.xl, OmniSpacing.xl, OmniSpacing.xxl),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const OmniDragHandle(),
-            const SizedBox(height: OmniSpacing.base),
-            _SheetHeader(sale: sale),
-            const SizedBox(height: OmniSpacing.xl),
-            _ItemRows(items: sale.items),
-            const SizedBox(height: OmniSpacing.sm),
-            const Divider(color: OmniColors.borderSubtle),
-            const SizedBox(height: OmniSpacing.sm),
-            _SheetTotal(sale: sale),
-            const SizedBox(height: OmniSpacing.xl),
-            OmniButton(
-              label: 'Ver / Compartir recibo',
-              icon: LucideIcons.share2,
-              fullWidth: true,
-              variant: OmniButtonVariant.secondary,
-              onPressed: () => ReceiptService.shareReceipt(sale),
-            ),
-          ],
-        ),
+    final c = context.colors;
+    return OmniSheetBody(
+      title: 'Ticket #${sale.id}',
+      subtitle: DateFormatter.dateTime(sale.createdAt),
+      trailing: OmniTag(
+        label: sale.paymentMethod,
+        tone: _methodTone(sale.paymentMethod),
+        icon: _methodIcon(sale.paymentMethod),
       ),
-    );
-  }
-}
-
-class _SheetHeader extends StatelessWidget {
-  const _SheetHeader({required this.sale});
-  final SaleEntity sale;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Text('Ticket #${sale.id}', style: OmniTypography.headingLg),
-        Text(
-          DateFormatter.dateTime(sale.createdAt),
-          style: OmniTypography.caption.copyWith(
-            color: OmniColors.textSecondary,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          OmniCard(
+            color: c.bgRaised,
+            child: Column(
+              children: [
+                for (final item in sale.items)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: OmniSpacing.xs),
+                    child: Row(
+                      children: [
+                        SizedBox(
+                          width: OmniSpacing.xxl + OmniSpacing.xs,
+                          child: Text('${item.quantity}×',
+                              style: context.text.moneySm
+                                  .copyWith(color: c.textMuted)),
+                        ),
+                        Expanded(
+                          child: Text(item.productName,
+                              style: context.text.bodyMd),
+                        ),
+                        Text(
+                          ref.formatSaleMoney(item.totalPrice, sale.currencyCode),
+                          style: context.text.moneySm,
+                        ),
+                      ],
+                    ),
+                  ),
+                const Padding(
+                  padding: EdgeInsets.symmetric(vertical: OmniSpacing.md),
+                  child: Divider(),
+                ),
+                Row(
+                  children: [
+                    Text('Total', style: context.text.headingMd),
+                    const Spacer(),
+                    Text(
+                      ref.formatSaleMoney(sale.totalAmount, sale.currencyCode),
+                      style: context.text.priceLg,
+                    ),
+                  ],
+                ),
+              ],
+            ),
           ),
-        ),
-      ],
-    );
-  }
-}
-
-class _ItemRows extends ConsumerWidget {
-  const _ItemRows({required this.items});
-  final List<SaleItemEntity> items;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    return Column(
-      children: items.map((item) => Padding(
-        padding: const EdgeInsets.only(bottom: OmniSpacing.sm),
-        child: Row(
-          children: [
-            Expanded(
-              child: Text(
-                '${item.quantity}× ${item.productName}',
-                style: OmniTypography.bodyMd,
-              ),
-            ),
-            Text(
-              ref.formatMoney(item.totalPrice),
-              style: OmniTypography.bodyMd.copyWith(
-                color: OmniColors.textSecondary,
-              ),
-            ),
-          ],
-        ),
-      )).toList(),
-    );
-  }
-}
-
-class _SheetTotal extends ConsumerWidget {
-  const _SheetTotal({required this.sale});
-  final SaleEntity sale;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    return Column(
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text('Total', style: OmniTypography.headingMd),
-            Text(
-              ref.formatMoney(sale.totalAmount),
-              style: OmniTypography.headingMd.copyWith(
-                color: OmniColors.primary,
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: OmniSpacing.sm),
-        Text(
-          'Método: ${sale.paymentMethod}',
-          style: OmniTypography.caption.copyWith(color: OmniColors.textMuted),
-        ),
-      ],
+          const SizedBox(height: OmniSpacing.xl),
+          OmniButton(
+            label: 'Ver / Compartir recibo',
+            icon: LucideIcons.share2,
+            fullWidth: true,
+            size: OmniButtonSize.lg,
+            variant: OmniButtonVariant.secondary,
+            onPressed: () => ReceiptService.shareReceipt(sale),
+          ),
+        ],
+      ),
     );
   }
 }
