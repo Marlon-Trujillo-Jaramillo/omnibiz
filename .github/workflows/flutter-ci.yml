@@ -23,4 +23,7 @@ jobs:
       - run: flutter pub get
       - run: dart format --output=none --set-exit-if-changed lib test
       - run: flutter analyze
-      - run: flutter test
+      - run: flutter test --coverage
+      - name: Coverage in the run summary
+        if: always() && hashFiles('inventario_app/coverage/lcov.info') != ''
+        run: python3 ../.github/scripts/coverage_summary.py lcov coverage/lcov.info inventario_app
