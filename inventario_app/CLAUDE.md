@@ -64,6 +64,13 @@ Each feature: `domain/entities/` → `domain/repositories/` (abstract interface)
 - New store: add it in the repository and, if legacy records need it, in `store_migration.dart`.
 - Deleting a store with products/sales/customers throws `StoreInUseException`; its categories are deleted in the same transaction.
 
+### Encrypted backup
+
+- `core/backup/`: `BackupCodec` (`.omnibak`: PBKDF2-HMAC-SHA256 from a user backup password + AES-256-GCM, header as AAD, gzip, runs in an `Isolate`) and `BackupService` (`create` = `exportDatabase`; `restore` = decode → import into a **memory** DB → run `onAppDbVersionChanged` + `ensureStoresMigrated` → replace every store of the real DB in **one** `db.transaction`).
+- The backup key never comes from the Keychain (that would tie it to one phone). Settings in secure storage (PIN, currency, business type, theme) are not in the backup.
+- When you bump `appDbVersion`, older backups keep working only if the new migration step lives in `onAppDbVersionChanged`. Backups newer than the app are rejected (`BackupTooNewException`).
+- UI: `features/settings/presentation/widgets/backup_section.dart`; after restoring, invalidate every data provider and set `currentStoreProvider` to `RestoreSummary.defaultStoreId`.
+
 ### Critical: atomic checkout
 
 Always check out through `ProcessSaleUseCase` (`processSaleUseCaseProvider`) — never touch stock or debt from the UI. The use case validates (store selected, non-empty cart, quantities, **Fiado requires a customer**), recomputes totals from the lines, then calls `SaleRepository.commitSale`, which in **one `db.transaction`** reads the products, validates aggregated quantities per product and `storeId`, validates the customer (exists, same store), updates stock, adds debt for Fiado and inserts the sale, returning it with its generated id. Rejections are thrown inside the transaction (`SaleRejection` subclasses → rollback) and mapped to `StockFailure` / `NotFoundFailure` / `ValidationFailure`. Any new multi-record write must follow the same pattern. Payment methods: `PaymentMethods.cash/card/credit` (no string literals). Debt payments go through `CustomerRepository.registerPayment` (validated in a transaction: `> 0` and `<= debt`).
