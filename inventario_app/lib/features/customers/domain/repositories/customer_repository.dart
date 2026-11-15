@@ -4,6 +4,9 @@ abstract interface class CustomerRepository {
   Future<List<CustomerEntity>> getAll({required int storeId});
   Future<CustomerEntity?> getById(int id);
   Future<void> save(CustomerEntity customer);
+
+  /// Elimina el cliente. Lanza [CustomerHasDebtException] si aún debe dinero:
+  /// borrarlo haría desaparecer la cuenta por cobrar sin rastro.
   Future<void> delete(int id);
 
   /// Abono a la deuda ([amount] en centavos), validado dentro de la
@@ -18,4 +21,14 @@ class InvalidPaymentException implements Exception {
 
   @override
   String toString() => 'InvalidPaymentException: $message';
+}
+
+class CustomerHasDebtException implements Exception {
+  const CustomerHasDebtException(this.debt);
+
+  /// Deuda pendiente en centavos.
+  final int debt;
+
+  @override
+  String toString() => 'CustomerHasDebtException: debe $debt centavos';
 }

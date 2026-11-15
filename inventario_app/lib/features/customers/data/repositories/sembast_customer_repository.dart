@@ -62,7 +62,13 @@ class SembastCustomerRepository implements CustomerRepository {
   @override
   Future<void> delete(int id) async {
     AppLogger.i(_tag, 'delete($id)');
-    await _customers.record(id).delete(_db);
+    await _db.transaction((txn) async {
+      final value = await _customers.record(id).get(txn);
+      if (value == null) return;
+      final debt = value['totalDebt'] as int;
+      if (debt > 0) throw CustomerHasDebtException(debt);
+      await _customers.record(id).delete(txn);
+    });
     AppLogger.i(_tag, 'delete($id) → ok');
   }
 

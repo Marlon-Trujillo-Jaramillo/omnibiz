@@ -336,6 +336,14 @@ class _CustomerMenu extends ConsumerWidget {
       await _openPay(context, ref, customer);
       return;
     }
+    if (customer.totalDebt > 0) {
+      ScaffoldMessenger.of(context).showOmni(
+        '${customer.name} debe ${ref.formatMoney(customer.totalDebt)}. '
+        'Registra el abono antes de eliminarlo.',
+        tone: OmniTone.warning,
+      );
+      return;
+    }
     final ok = await OmniConfirmDialog.show(
       context,
       icon: LucideIcons.userX,
@@ -344,7 +352,18 @@ class _CustomerMenu extends ConsumerWidget {
       confirmLabel: 'Eliminar',
       destructive: true,
     );
-    if (ok) ref.read(customersProvider.notifier).delete(customer.id);
+    if (!ok || !context.mounted) return;
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      await ref.read(customersProvider.notifier).delete(customer.id);
+    } on CustomerHasDebtException catch (e) {
+      // La deuda cambió entre el aviso y el borrado: el repositorio lo impide.
+      messenger.showOmni(
+        '${customer.name} debe ${ref.formatMoney(e.debt)}. '
+        'Registra el abono antes de eliminarlo.',
+        tone: OmniTone.warning,
+      );
+    }
   }
 }
 

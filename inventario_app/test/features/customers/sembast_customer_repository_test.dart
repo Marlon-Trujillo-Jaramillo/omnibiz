@@ -134,4 +134,33 @@ void main() {
       expect((await repo.getById(id))?.totalDebt, 1001);
     });
   });
+
+  group('delete', () {
+    test('elimina un cliente sin deuda', () async {
+      await repo.save(_entity(name: 'Ana'));
+      final id = (await repo.getAll(storeId: 0)).single.id;
+      await repo.delete(id);
+      expect(await repo.getById(id), isNull);
+    });
+
+    test('un cliente que debe dinero no se elimina', () async {
+      await repo.save(_entity(name: 'Ana', totalDebt: 2500));
+      final id = (await repo.getAll(storeId: 0)).single.id;
+      await expectLater(
+        repo.delete(id),
+        throwsA(
+          isA<CustomerHasDebtException>().having((e) => e.debt, 'debt', 2500),
+        ),
+      );
+      expect((await repo.getById(id))?.totalDebt, 2500);
+    });
+
+    test('tras pagar toda la deuda ya se puede eliminar', () async {
+      await repo.save(_entity(name: 'Ana', totalDebt: 2500));
+      final id = (await repo.getAll(storeId: 0)).single.id;
+      await repo.registerPayment(id, 2500);
+      await repo.delete(id);
+      expect(await repo.getById(id), isNull);
+    });
+  });
 }
