@@ -1,0 +1,11 @@
+# Secret scanning rules: gitleaks' defaults plus the exceptions below.
+[extend]
+useDefault = true
+
+[allowlist]
+description = """
+CocoaPods lockfiles: the matches are public checksums of the pods, not secrets.
+"""
+paths = [
+  '''(^|/)Podfile\.lock$''',
+]
