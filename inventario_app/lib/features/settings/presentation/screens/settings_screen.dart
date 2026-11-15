@@ -6,6 +6,7 @@ import 'package:inventario_app/app/router/app_routes.dart';
 import 'package:inventario_app/core/design_system/design_system.dart';
 import 'package:inventario_app/core/utils/app_currency.dart';
 import 'package:inventario_app/core/utils/currency_formatter.dart';
+import 'package:inventario_app/features/settings/presentation/widgets/backup_section.dart';
 import 'package:inventario_app/features/stores/presentation/providers/stores_notifier.dart';
 import 'package:inventario_app/shared/providers/currency_provider.dart';
 import 'package:inventario_app/shared/providers/current_store_provider.dart';
@@ -89,6 +90,8 @@ class SettingsScreen extends ConsumerWidget {
                 '${AppRoutes.dashboardBase}/${AppRoutes.stores}',
               ),
             ),
+            const _SectionHeader('Respaldo de datos'),
+            const BackupSection(),
             const _SectionHeader('Moneda del sistema'),
             OmniCard(
               padding: EdgeInsets.zero,

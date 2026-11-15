@@ -747,16 +747,16 @@ Ordenados por impacto en el negocio.
 
 | # | Hallazgo | Por qué importa | Dónde |
 |---|---|---|---|
-| C1 | **No hay respaldo ni exportación de datos de ningún tipo** | Todo vive en un solo teléfono, cifrado con una clave del Keychain/Keystore, y el respaldo de Android está desactivado. Si el teléfono se pierde, se daña o se desinstala la app, se pierden ventas, inventario y deudas, **sin forma de recuperarlos**. | Toda la app; `AndroidManifest.xml` |
+| C1 ✅ | **No hay respaldo ni exportación de datos de ningún tipo** | Todo vive en un solo teléfono, cifrado con una clave del Keychain/Keystore, y el respaldo de Android está desactivado. Si el teléfono se pierde, se daña o se desinstala la app, se pierden ventas, inventario y deudas, **sin forma de recuperarlos**. | Toda la app; `AndroidManifest.xml` |
 
 ### Alto
 
 | # | Hallazgo | Por qué importa | Dónde |
 |---|---|---|---|
-| A1 | **La biometría no funciona en Android** | `local_auth` exige `FragmentActivity` y `MainActivity` extiende `FlutterActivity`. El error se ignora en silencio: el botón de huella no hace nada. | `MainActivity.kt`; `local_auth_repository.dart` |
-| A2 | **Falta `NSFaceIDUsageDescription` en iOS** | Face ID no puede usarse en iPhones con Face ID; según la documentación de `local_auth` la clave es obligatoria. | `ios/Runner/Info.plist` |
-| A3 | **PIN olvidado = datos perdidos** | `resetPin()` no es accesible desde ninguna pantalla. Sin biometría funcional (A1, A2), olvidar el PIN obliga a desinstalar, y con ello se pierde la clave de cifrado. | `auth_notifier.dart` |
-| A4 | **Se puede borrar un cliente que debe dinero** | La cuenta por cobrar desaparece sin aviso ni rastro. | `customers_screen.dart`; `sembast_customer_repository.dart` |
+| A1 ✅ | **La biometría no funciona en Android** | `local_auth` exige `FragmentActivity` y `MainActivity` extiende `FlutterActivity`. El error se ignora en silencio: el botón de huella no hace nada. | `MainActivity.kt`; `local_auth_repository.dart` |
+| A2 ✅ | **Falta `NSFaceIDUsageDescription` en iOS** | Face ID no puede usarse en iPhones con Face ID; según la documentación de `local_auth` la clave es obligatoria. | `ios/Runner/Info.plist` |
+| A3 ✅ | **PIN olvidado = datos perdidos** | `resetPin()` no es accesible desde ninguna pantalla. Sin biometría funcional (A1, A2), olvidar el PIN obliga a desinstalar, y con ello se pierde la clave de cifrado. | `auth_notifier.dart` |
+| A4 ✅ | **Se puede borrar un cliente que debe dinero** | La cuenta por cobrar desaparece sin aviso ni rastro. | `customers_screen.dart`; `sembast_customer_repository.dart` |
 
 ### Medio
 
@@ -786,6 +786,16 @@ Ordenados por impacto en el negocio.
 
 ---
 
+### Resueltos (2026-11-15)
+
+| # | Cómo se resolvió |
+|---|---|
+| C1 | **Respaldo cifrado** en Configuración → Respaldo de datos (ver [sección 14](#14-respaldo-cifrado)). |
+| A1 | `MainActivity` extiende `FlutterFragmentActivity`. |
+| A2 | `NSFaceIDUsageDescription` declarado en `ios/Runner/Info.plist`. |
+| A3 | "¿Olvidaste tu PIN?" en la pantalla de bloqueo explica la recuperación: biometría o reinstalar y restaurar el respaldo. No borra nada desde ahí. |
+| A4 | `CustomerRepository.delete` lanza `CustomerHasDebtException` dentro de una transacción si el cliente debe dinero; la pantalla avisa antes. |
+
 ## 13. Recomendaciones
 
 En orden sugerido.
@@ -807,3 +817,30 @@ En orden sugerido.
 7. **Datos del negocio en el recibo y opción de no imprimir (M9, B2).**
 8. **Monitoreo de errores en producción (B1),** por ejemplo Sentry, como en Lavadero.
 9. **Unicidad de códigos (M10)** y aviso de "agotado" al escanear (B3).
+
+---
+
+## 14. Respaldo cifrado
+
+**Dónde:** `lib/core/backup/` (`BackupCodec`, `BackupService`) y la sección de Configuración (`features/settings/presentation/widgets/backup_section.dart`).
+
+**Formato del archivo `.omnibak`** (texto, tres líneas):
+
+```
+OMNIBIZ-BACKUP v1
+{"kdf":"pbkdf2-hmac-sha256","iterations":210000,"salt":"…","cipher":"aes-256-gcm","compression":"gzip","createdAt":"…","schemaVersion":2}
+base64(nonce[12] ‖ ciphertext ‖ tag[16])
+```
+
+| Decisión | Por qué |
+|---|---|
+| Clave derivada de una **contraseña de respaldo** (PBKDF2-HMAC-SHA256, 210 000 iteraciones, sal aleatoria) | La clave de la BD vive en el Keychain/Keystore de este teléfono: un respaldo cifrado con ella no se podría abrir en otro equipo |
+| AES-256-GCM con la cabecera como AAD | Confidencialidad e integridad: una contraseña errada o un archivo alterado (incluida la cabecera) fallan igual, sin datos basura |
+| KDF y cifrado en un `Isolate` | El KDF es lento a propósito; la interfaz no se congela |
+| Restaurar importa a una BD **en memoria** y le aplica `onAppDbVersionChanged` + `ensureStoresMigrated` | Un respaldo de un esquema anterior (p. ej. v1 con montos `double`) llega migrado a centavos |
+| El reemplazo de los datos reales corre en **una** `db.transaction` | O queda todo restaurado o no cambia nada |
+| Respaldo de una versión de esquema mayor → `BackupTooNewException` | No se restauran datos que esta versión no entiende |
+
+**No incluye** (vive en el almacenamiento seguro, no en la BD): el PIN, la moneda, el tipo de negocio y el tema. Tras restaurar se elige la primera sucursal del respaldo.
+
+**Pruebas:** `test/core/backup/` (ida y vuelta, contraseña errada, cabecera alterada, archivo inválido, restauración que reemplaza todo, contraseña errada sin tocar nada, migración v1 → v2, respaldo más nuevo rechazado) y `test/features/settings/backup_section_test.dart` (validaciones del diálogo).

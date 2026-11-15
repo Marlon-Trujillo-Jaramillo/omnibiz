@@ -6,7 +6,7 @@ Everything runs on the device: no backend, no accounts, no internet required. Th
 
 [![Flutter CI](https://github.com/Marlon-Trujillo-Jaramillo/omnibiz/actions/workflows/flutter-ci.yml/badge.svg)](https://github.com/Marlon-Trujillo-Jaramillo/omnibiz/actions/workflows/flutter-ci.yml)
 ![Flutter](https://img.shields.io/badge/Flutter-Riverpod-02569B)
-![Tests](https://img.shields.io/badge/tests-177%20passing-brightgreen)
+![Tests](https://img.shields.io/badge/tests-195%20passing-brightgreen)
 ![Platforms](https://img.shields.io/badge/platforms-Android%20%7C%20iOS-lightgrey)
 
 ## Features
@@ -17,6 +17,7 @@ Everything runs on the device: no backend, no accounts, no internet required. Th
 - **PDF receipts** ready to print or share.
 - **Sales history and analytics** with charts.
 - **Multiple stores (branches)** on the same device.
+- **Encrypted backup and restore**: export everything to a file protected with a backup password (PBKDF2 + AES-256-GCM), share it to Drive, mail or WhatsApp, and restore it on any phone.
 - **Onboarding by business type** and light / dark themes.
 
 ## Engineering highlights
@@ -28,8 +29,9 @@ Everything runs on the device: no backend, no accounts, no internet required. Th
 | Exact money | All amounts are integers in **cents**, so totals never drift from floating-point rounding |
 | Access security | PIN derived with **PBKDF2**, progressive lockout after failed attempts, biometric unlock |
 | Consistency | Checkout is a single transaction: no half-written sales if the app is killed mid-operation |
+| Backups | Portable `.omnibak` files: key derived from a backup password (PBKDF2-HMAC-SHA256, 210k iterations), AES-256-GCM with the header as AAD, KDF in an isolate. Restore migrates old schemas in an in-memory copy, then swaps all data in one transaction |
 | Fully offline | Fonts and assets are bundled; the app never calls the network |
-| Quality | **177 tests** and `flutter analyze` with no issues, enforced by GitHub Actions |
+| Quality | **195 tests** and `flutter analyze` with no issues, enforced by GitHub Actions |
 
 The full technical and functional analysis (architecture, data model, security flow, every feature, risks and recommendations) is in [`inventario_app/docs/ANALISIS_TECNICO.md`](inventario_app/docs/ANALISIS_TECNICO.md) (Spanish).
 
@@ -54,14 +56,14 @@ inventario_app/lib/
 cd inventario_app
 flutter pub get
 flutter run          # Android or iOS device / emulator
-flutter test         # 177 tests
+flutter test         # 195 tests
 flutter analyze
 ```
 
 ## Roadmap
 
-- Encrypted backup and export of the business data (today, losing the phone means losing the data)
-- Fix biometric unlock on Android and declare Face ID usage on iOS
+- Automatic backup reminders
+- Stock movements with a reason (purchase, adjustment, loss) and payment history for customers
 - Optional cloud sync between devices
 
 ## Author

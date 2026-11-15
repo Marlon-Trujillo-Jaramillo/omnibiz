@@ -259,19 +259,29 @@ class _LockScreenState extends ConsumerState<LockScreen>
                           padding: const EdgeInsets.only(
                             bottom: OmniSpacing.xl,
                           ),
-                          child: AnimatedOpacity(
-                            opacity: remaining != null ? 0.35 : 1,
-                            duration: OmniMotion.base,
-                            child: _NumPad(
-                              maxWidth: constraints.maxWidth,
-                              enabled: !blocked,
-                              onDigit: _onDigit,
-                              onDelete: _onDelete,
-                              onBiometric:
-                                  !widget.setupMode && auth.hasBiometrics
-                                  ? _biometric
-                                  : null,
-                            ),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              AnimatedOpacity(
+                                opacity: remaining != null ? 0.35 : 1,
+                                duration: OmniMotion.base,
+                                child: _NumPad(
+                                  maxWidth: constraints.maxWidth,
+                                  enabled: !blocked,
+                                  onDigit: _onDigit,
+                                  onDelete: _onDelete,
+                                  onBiometric:
+                                      !widget.setupMode && auth.hasBiometrics
+                                      ? _biometric
+                                      : null,
+                                ),
+                              ),
+                              if (!widget.setupMode)
+                                TextButton(
+                                  onPressed: () => _showForgotPin(context),
+                                  child: const Text('¿Olvidaste tu PIN?'),
+                                ),
+                            ],
                           ),
                         ),
                       ],
@@ -732,3 +742,36 @@ class _KeyState extends State<_Key> {
     );
   }
 }
+
+/// Solo explica cómo recuperarse: no borra nada desde la pantalla de bloqueo,
+/// para que nadie con el teléfono en la mano pueda destruir los datos.
+Future<void> _showForgotPin(BuildContext context) => showDialog<void>(
+  context: context,
+  builder: (dialogContext) => OmniDialog(
+    title: '¿Olvidaste tu PIN?',
+    icon: LucideIcons.keyRound,
+    tone: OmniTone.info,
+    actions: OmniDialogActions(
+      onCancel: () => Navigator.pop(dialogContext),
+      onConfirm: () => Navigator.pop(dialogContext),
+      confirmLabel: 'Entendido',
+    ),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Por seguridad, el PIN no se puede restablecer: protege datos '
+          'cifrados que solo este teléfono puede abrir.',
+          style: dialogContext.text.bodyMd,
+        ),
+        const SizedBox(height: OmniSpacing.md),
+        Text(
+          'Si usas la huella o el rostro, desbloquea con ellos. Si no, '
+          'reinstala la app y, en Configuración → Respaldo de datos, '
+          'restaura tu último respaldo con su contraseña.',
+          style: dialogContext.text.bodyMd,
+        ),
+      ],
+    ),
+  ),
+);
