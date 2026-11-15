@@ -80,12 +80,14 @@ class SembastCustomerRepository implements CustomerRepository {
       // Centavos enteros: comparación y resta exactas, sin tolerancias.
       final debt = value['totalDebt'] as int;
       if (amount > debt) {
-        throw const InvalidPaymentException('El monto supera la deuda del cliente');
+        throw const InvalidPaymentException(
+          'El monto supera la deuda del cliente',
+        );
       }
       final newDebt = debt - amount;
       AppLogger.i(_tag, 'registerPayment($id): $debt - $amount = $newDebt');
       await _customers.record(id).update(txn, {
-        'totalDebt':       newDebt,
+        'totalDebt': newDebt,
         'lastTransaction': DateTime.now().toIso8601String(),
       });
     });

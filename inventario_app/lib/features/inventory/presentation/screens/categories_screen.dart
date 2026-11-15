@@ -7,18 +7,18 @@ import 'package:inventario_app/features/inventory/presentation/providers/product
 import 'package:inventario_app/shared/providers/current_store_provider.dart';
 
 final _kCategoryIcons = <String, IconData>{
-  'package':    LucideIcons.package,
-  'coffee':     LucideIcons.coffee,
-  'shirt':      LucideIcons.shirt,
+  'package': LucideIcons.package,
+  'coffee': LucideIcons.coffee,
+  'shirt': LucideIcons.shirt,
   'smartphone': LucideIcons.smartphone,
-  'home':       LucideIcons.home,
-  'heart':      LucideIcons.heart,
-  'star':       LucideIcons.star,
-  'gift':       LucideIcons.gift,
-  'music':      LucideIcons.music,
-  'book':       LucideIcons.book,
-  'wrench':     LucideIcons.wrench,
-  'leaf':       LucideIcons.leaf,
+  'home': LucideIcons.home,
+  'heart': LucideIcons.heart,
+  'star': LucideIcons.star,
+  'gift': LucideIcons.gift,
+  'music': LucideIcons.music,
+  'book': LucideIcons.book,
+  'wrench': LucideIcons.wrench,
+  'leaf': LucideIcons.leaf,
 };
 
 IconData _iconFor(String key) => _kCategoryIcons[key] ?? LucideIcons.package;
@@ -66,11 +66,11 @@ class CategoriesScreen extends ConsumerWidget {
   }
 
   static void _openSheet(
-      BuildContext context, WidgetRef ref, CategoryEntity? existing) {
-    showOmniSheet(
-      context,
-      builder: (_) => _CategorySheet(existing: existing),
-    );
+    BuildContext context,
+    WidgetRef ref,
+    CategoryEntity? existing,
+  ) {
+    showOmniSheet(context, builder: (_) => _CategorySheet(existing: existing));
   }
 }
 
@@ -97,12 +97,21 @@ class _CategoryTile extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final count = ref.watch(productsProvider.select((a) =>
-        a.valueOrNull?.where((p) => p.category == category.name).length ?? 0));
+    final count = ref.watch(
+      productsProvider.select(
+        (a) =>
+            a.valueOrNull?.where((p) => p.category == category.name).length ??
+            0,
+      ),
+    );
     return OmniCard(
       onTap: () => CategoriesScreen._openSheet(context, ref, category),
       padding: const EdgeInsets.fromLTRB(
-          OmniSpacing.md, OmniSpacing.md, OmniSpacing.xs, OmniSpacing.md),
+        OmniSpacing.md,
+        OmniSpacing.md,
+        OmniSpacing.xs,
+        OmniSpacing.md,
+      ),
       child: Row(
         children: [
           OmniIconAvatar(icon: _iconFor(category.icon)),
@@ -111,11 +120,16 @@ class _CategoryTile extends ConsumerWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(category.name,
-                    style: context.text.bodyMd
-                        .copyWith(fontWeight: FontWeight.w600)),
-                Text('$count producto${count == 1 ? '' : 's'}',
-                    style: context.text.caption.tabular),
+                Text(
+                  category.name,
+                  style: context.text.bodyMd.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                Text(
+                  '$count producto${count == 1 ? '' : 's'}',
+                  style: context.text.caption.tabular,
+                ),
               ],
             ),
           ),
@@ -142,8 +156,11 @@ class _TileActions extends ConsumerWidget {
         ),
         IconButton(
           tooltip: 'Eliminar',
-          icon: Icon(LucideIcons.trash2,
-              size: OmniSizes.iconSm + 2, color: context.colors.danger),
+          icon: Icon(
+            LucideIcons.trash2,
+            size: OmniSizes.iconSm + 2,
+            color: context.colors.danger,
+          ),
           onPressed: () => _confirmDelete(context, ref),
         ),
       ],
@@ -154,7 +171,8 @@ class _TileActions extends ConsumerWidget {
     final confirmed = await OmniConfirmDialog.show(
       context,
       title: 'Eliminar categoría',
-      body: '¿Eliminar "${category.name}"? Los productos quedarán sin categoría.',
+      body:
+          '¿Eliminar "${category.name}"? Los productos quedarán sin categoría.',
       confirmLabel: 'Eliminar',
       destructive: true,
     );
@@ -183,7 +201,7 @@ class _CategorySheetState extends ConsumerState<_CategorySheet> {
   @override
   void initState() {
     super.initState();
-    _nameCtrl     = TextEditingController(text: widget.existing?.name ?? '');
+    _nameCtrl = TextEditingController(text: widget.existing?.name ?? '');
     _selectedIcon = widget.existing?.icon ?? 'package';
   }
 
@@ -199,19 +217,23 @@ class _CategorySheetState extends ConsumerState<_CategorySheet> {
     setState(() => _loading = true);
     final messenger = ScaffoldMessenger.of(context);
     try {
-      await ref.read(categoriesProvider.notifier).add(
-        CategoryEntity(
-          id:      _isEdit ? widget.existing!.id : 0,
-          name:    name,
-          icon:    _selectedIcon,
-          storeId: storeId,
-        ),
-      );
+      await ref
+          .read(categoriesProvider.notifier)
+          .add(
+            CategoryEntity(
+              id: _isEdit ? widget.existing!.id : 0,
+              name: name,
+              icon: _selectedIcon,
+              storeId: storeId,
+            ),
+          );
     } catch (_) {
       // Antes el botón quedaba cargando para siempre si fallaba el guardado.
       if (mounted) setState(() => _loading = false);
-      messenger.showOmni('No se pudo guardar la categoría.',
-          tone: OmniTone.danger);
+      messenger.showOmni(
+        'No se pudo guardar la categoría.',
+        tone: OmniTone.danger,
+      );
       return;
     }
     if (mounted) Navigator.pop(context);
@@ -226,28 +248,30 @@ class _CategorySheetState extends ConsumerState<_CategorySheet> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-            OmniTextField(
-              controller: _nameCtrl,
-              label: 'Nombre',
-              hint: 'Ej: Bebidas, Ropa, Electrónica',
-              textInputAction: TextInputAction.done,
-            ),
-            const SizedBox(height: OmniSpacing.xl),
-            Text('ÍCONO', style: context.text.overline),
-            const SizedBox(height: OmniSpacing.md),
-            _IconPicker(
-              selected: _selectedIcon,
-              onSelect: (k) => setState(() => _selectedIcon = k),
-            ),
-            const SizedBox(height: OmniSpacing.xxl),
-            OmniButton(
-              label: _isEdit ? 'Guardar cambios' : 'Crear categoría',
-              onPressed: _loading || storeId == null ? null : () => _save(storeId),
-              loading: _loading,
-              fullWidth: true,
-              size: OmniButtonSize.lg,
-              icon: _isEdit ? LucideIcons.save : LucideIcons.plus,
-            ),
+          OmniTextField(
+            controller: _nameCtrl,
+            label: 'Nombre',
+            hint: 'Ej: Bebidas, Ropa, Electrónica',
+            textInputAction: TextInputAction.done,
+          ),
+          const SizedBox(height: OmniSpacing.xl),
+          Text('ÍCONO', style: context.text.overline),
+          const SizedBox(height: OmniSpacing.md),
+          _IconPicker(
+            selected: _selectedIcon,
+            onSelect: (k) => setState(() => _selectedIcon = k),
+          ),
+          const SizedBox(height: OmniSpacing.xxl),
+          OmniButton(
+            label: _isEdit ? 'Guardar cambios' : 'Crear categoría',
+            onPressed: _loading || storeId == null
+                ? null
+                : () => _save(storeId),
+            loading: _loading,
+            fullWidth: true,
+            size: OmniButtonSize.lg,
+            icon: _isEdit ? LucideIcons.save : LucideIcons.plus,
+          ),
         ],
       ),
     );
@@ -266,12 +290,14 @@ class _IconPicker extends StatelessWidget {
       spacing: OmniSpacing.sm,
       runSpacing: OmniSpacing.sm,
       children: _kCategoryIcons.entries
-          .map((e) => _IconOption(
-                iconKey: e.key,
-                iconData: e.value,
-                selected: selected == e.key,
-                onTap: () => onSelect(e.key),
-              ))
+          .map(
+            (e) => _IconOption(
+              iconKey: e.key,
+              iconData: e.value,
+              selected: selected == e.key,
+              onTap: () => onSelect(e.key),
+            ),
+          )
           .toList(),
     );
   }

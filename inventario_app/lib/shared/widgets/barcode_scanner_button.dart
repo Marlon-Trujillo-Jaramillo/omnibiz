@@ -40,6 +40,7 @@ class _ScannerDialogState extends State<_ScannerDialog> {
   String? _cameraError;
   final _textCtrl = TextEditingController();
   MobileScannerController? _ctrl;
+
   /// La cámara emite varias detecciones por segundo: solo la primera cierra
   /// el diálogo (un segundo `pop` cerraría la pantalla de debajo).
   bool _handled = false;
@@ -120,17 +121,28 @@ class _DialogHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(
-        OmniSpacing.xl, OmniSpacing.md, OmniSpacing.sm, 0),
+        OmniSpacing.xl,
+        OmniSpacing.md,
+        OmniSpacing.sm,
+        0,
+      ),
       child: Row(
         children: [
-          Icon(LucideIcons.scan, color: context.colors.primary, size: OmniSizes.iconMd),
+          Icon(
+            LucideIcons.scan,
+            color: context.colors.primary,
+            size: OmniSizes.iconMd,
+          ),
           const SizedBox(width: OmniSpacing.sm),
           Expanded(
             child: Text('Escanear Código', style: context.text.headingSm),
           ),
           IconButton(
-            icon: Icon(LucideIcons.x,
-                color: context.colors.textSecondary, size: OmniSizes.iconMd),
+            icon: Icon(
+              LucideIcons.x,
+              color: context.colors.textSecondary,
+              size: OmniSizes.iconMd,
+            ),
             onPressed: onClose,
           ),
         ],
@@ -157,7 +169,11 @@ class _ManualInput extends StatelessWidget {
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(
-        OmniSpacing.xl, OmniSpacing.md, OmniSpacing.xl, OmniSpacing.xl),
+        OmniSpacing.xl,
+        OmniSpacing.md,
+        OmniSpacing.xl,
+        OmniSpacing.xl,
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -216,14 +232,15 @@ class _CameraView extends StatelessWidget {
     );
   }
 
-  static String _errorMessage(MobileScannerException e) =>
-      switch (e.errorCode) {
-        MobileScannerErrorCode.permissionDenied =>
-          'Permiso de cámara denegado. Actívalo en Ajustes > Privacidad > Cámara.',
-        MobileScannerErrorCode.unsupported =>
-          'Este dispositivo no tiene cámara disponible.',
-        _ => 'No se pudo iniciar la cámara.',
-      };
+  static String _errorMessage(
+    MobileScannerException e,
+  ) => switch (e.errorCode) {
+    MobileScannerErrorCode.permissionDenied =>
+      'Permiso de cámara denegado. Actívalo en Ajustes > Privacidad > Cámara.',
+    MobileScannerErrorCode.unsupported =>
+      'Este dispositivo no tiene cámara disponible.',
+    _ => 'No se pudo iniciar la cámara.',
+  };
 }
 
 class _ScannerPreview extends StatelessWidget {
@@ -256,12 +273,16 @@ class _ScannerPreview extends StatelessWidget {
                   },
                   errorBuilder: (_, error) {
                     WidgetsBinding.instance.addPostFrameCallback(
-                        (_) => onError(_CameraView._errorMessage(error)));
+                      (_) => onError(_CameraView._errorMessage(error)),
+                    );
                     return ColoredBox(
                       color: context.colors.mediaBg,
                       child: Center(
-                        child: Icon(LucideIcons.cameraOff,
-                            color: context.colors.textDisabled, size: OmniSizes.iconHero),
+                        child: Icon(
+                          LucideIcons.cameraOff,
+                          color: context.colors.textDisabled,
+                          size: OmniSizes.iconHero,
+                        ),
                       ),
                     );
                   },
@@ -287,7 +308,10 @@ class _ScanReticle extends StatelessWidget {
         heightFactor: 0.55,
         child: Container(
           decoration: BoxDecoration(
-            border: Border.all(color: context.colors.primary, width: OmniSizes.stroke),
+            border: Border.all(
+              color: context.colors.primary,
+              width: OmniSizes.stroke,
+            ),
             borderRadius: OmniRadius.mdAll,
           ),
         ),
@@ -310,8 +334,11 @@ class _ScannerHintRow extends StatelessWidget {
       ),
       child: Row(
         children: [
-          Icon(LucideIcons.focus,
-              size: OmniSpacing.md, color: context.colors.textMuted),
+          Icon(
+            LucideIcons.focus,
+            size: OmniSpacing.md,
+            color: context.colors.textMuted,
+          ),
           const SizedBox(width: OmniSpacing.xs),
           Text(
             'Apunta al código',

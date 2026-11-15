@@ -13,15 +13,15 @@ class SembastStoreRepository implements StoreRepository {
   final Database _db;
   static final _stores = intMapStoreFactory.store('stores');
   // delete() verifica / limpia los datos de la sucursal en la misma transacción.
-  static final _products   = intMapStoreFactory.store('products');
+  static final _products = intMapStoreFactory.store('products');
   static final _categories = intMapStoreFactory.store('categories');
-  static final _sales      = intMapStoreFactory.store('sales');
-  static final _customers  = intMapStoreFactory.store('customers');
+  static final _sales = intMapStoreFactory.store('sales');
+  static final _customers = intMapStoreFactory.store('customers');
 
   @override
   Future<List<StoreEntity>> getAll() async {
     AppLogger.d(_tag, 'getAll()');
-    final finder    = Finder(sortOrders: [SortOrder('createdAt')]);
+    final finder = Finder(sortOrders: [SortOrder('createdAt')]);
     final snapshots = await _stores.find(_db, finder: finder);
     AppLogger.d(_tag, 'getAll() → ${snapshots.length} sucursales');
     return snapshots
@@ -65,15 +65,20 @@ class SembastStoreRepository implements StoreRepository {
   Future<void> delete(int id) async {
     AppLogger.i(_tag, 'delete($id)');
     await _db.transaction((txn) async {
-      final byStore  = Filter.equals('storeId', id);
-      final products  = await _products.count(txn, filter: byStore);
-      final sales     = await _sales.count(txn, filter: byStore);
+      final byStore = Filter.equals('storeId', id);
+      final products = await _products.count(txn, filter: byStore);
+      final sales = await _sales.count(txn, filter: byStore);
       final customers = await _customers.count(txn, filter: byStore);
       if (products + sales + customers > 0) {
-        AppLogger.w(_tag,
-            'delete($id) → bloqueado: $products productos, $sales ventas, $customers clientes');
+        AppLogger.w(
+          _tag,
+          'delete($id) → bloqueado: $products productos, $sales ventas, $customers clientes',
+        );
         throw StoreInUseException(
-            products: products, sales: sales, customers: customers);
+          products: products,
+          sales: sales,
+          customers: customers,
+        );
       }
       await _categories.delete(txn, finder: Finder(filter: byStore));
       await _stores.record(id).delete(txn);
@@ -87,7 +92,9 @@ class SembastStoreRepository implements StoreRepository {
     final query = _stores.query(
       finder: Finder(sortOrders: [SortOrder('createdAt')]),
     );
-    return query.onSnapshots(_db).map(
+    return query
+        .onSnapshots(_db)
+        .map(
           (snapshots) => snapshots
               .map((s) => Store.fromMap(s.key, s.value).toEntity())
               .toList(),

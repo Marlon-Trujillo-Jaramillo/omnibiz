@@ -22,6 +22,7 @@ class OmniSelectableChip extends StatelessWidget {
   final bool selected;
   final VoidCallback onTap;
   final IconData? icon;
+
   /// Contador opcional a la derecha (p. ej. productos por categoría).
   final int? count;
 
@@ -48,9 +49,7 @@ class OmniSelectableChip extends StatelessWidget {
             decoration: BoxDecoration(
               color: selected ? c.primary : c.bgSurface,
               borderRadius: OmniRadius.fullAll,
-              border: Border.all(
-                color: selected ? c.primary : c.borderMuted,
-              ),
+              border: Border.all(color: selected ? c.primary : c.borderMuted),
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
@@ -90,11 +89,7 @@ class OmniSelectableChip extends StatelessWidget {
 
 /// Chip eliminable (variantes de un producto).
 class OmniInputChip extends StatelessWidget {
-  const OmniInputChip({
-    super.key,
-    required this.label,
-    required this.onDelete,
-  });
+  const OmniInputChip({super.key, required this.label, required this.onDelete});
 
   final String label;
   final VoidCallback onDelete;
@@ -122,8 +117,11 @@ class OmniInputChip extends StatelessWidget {
             onPressed: onDelete,
             tooltip: 'Quitar $label',
             visualDensity: VisualDensity.compact,
-            icon: Icon(Icons.close_rounded,
-                color: c.primaryText, size: OmniSizes.iconSm),
+            icon: Icon(
+              Icons.close_rounded,
+              color: c.primaryText,
+              size: OmniSizes.iconSm,
+            ),
           ),
         ],
       ),

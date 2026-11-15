@@ -4,6 +4,7 @@ abstract interface class StoreRepository {
   Future<List<StoreEntity>> getAll();
   Future<StoreEntity?> getById(int id);
   Future<void> save(StoreEntity store);
+
   /// Elimina la sucursal (y sus categorías). Lanza [StoreInUseException] si
   /// aún tiene productos, ventas o clientes: nunca deja datos huérfanos.
   Future<void> delete(int id);

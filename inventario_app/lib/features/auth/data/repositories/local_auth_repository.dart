@@ -10,8 +10,8 @@ class LocalAuthRepository implements AuthRepository {
     FlutterSecureStorage? storage,
     LocalAuthentication? localAuth,
     this.iterations = AppConstants.pinHashIterations,
-  })  : _storage = storage ?? const FlutterSecureStorage(),
-        _localAuth = localAuth ?? LocalAuthentication();
+  }) : _storage = storage ?? const FlutterSecureStorage(),
+       _localAuth = localAuth ?? LocalAuthentication();
 
   final FlutterSecureStorage _storage;
   final LocalAuthentication _localAuth;
@@ -19,10 +19,10 @@ class LocalAuthRepository implements AuthRepository {
   /// Iteraciones PBKDF2 para hashes nuevos (configurable para tests).
   final int iterations;
 
-  static const _tag         = 'LocalAuthRepo';
-  static const _pinKey      = 'omni_pin_hash';
+  static const _tag = 'LocalAuthRepo';
+  static const _pinKey = 'omni_pin_hash';
   static const _attemptsKey = 'omni_pin_failed_attempts';
-  static const _lockedKey   = 'omni_pin_locked_until';
+  static const _lockedKey = 'omni_pin_locked_until';
 
   @override
   Future<bool> hasPin() async {
@@ -61,7 +61,7 @@ class LocalAuthRepository implements AuthRepository {
   @override
   Future<PinLockout> readLockout() async {
     final attempts = int.tryParse(await _storage.read(key: _attemptsKey) ?? '');
-    final until    = DateTime.tryParse(await _storage.read(key: _lockedKey) ?? '');
+    final until = DateTime.tryParse(await _storage.read(key: _lockedKey) ?? '');
     return PinLockout(failedAttempts: attempts ?? 0, lockedUntil: until);
   }
 
@@ -72,7 +72,9 @@ class LocalAuthRepository implements AuthRepository {
       await _storage.delete(key: _lockedKey);
     } else {
       await _storage.write(
-          key: _lockedKey, value: lockout.lockedUntil!.toIso8601String());
+        key: _lockedKey,
+        value: lockout.lockedUntil!.toIso8601String(),
+      );
     }
   }
 

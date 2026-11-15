@@ -23,7 +23,7 @@ abstract final class ReceiptService {
   static Future<void> generateAndSaveReceipt(SaleEntity sale) async {
     try {
       final bytes = await _buildPdfBytes(sale);
-      final file  = await _saveToFile(sale.id, bytes);
+      final file = await _saveToFile(sale.id, bytes);
       debugPrint('[ReceiptService] PDF guardado: ${file.path}');
       await Printing.layoutPdf(
         onLayout: (_) async => bytes,
@@ -53,7 +53,7 @@ abstract final class ReceiptService {
   // ── PDF builder ──────────────────────────────────────────────────────────────
 
   static Future<Uint8List> _buildPdfBytes(SaleEntity sale) async {
-    final doc     = pw.Document();
+    final doc = pw.Document();
     final dateStr = DateFormat('dd/MM/yyyy HH:mm').format(sale.createdAt);
     // La moneda de la venta, no la configurada hoy en ajustes.
     final currency = AppCurrency.fromCode(sale.currencyCode);
@@ -70,7 +70,9 @@ abstract final class ReceiptService {
                 child: pw.Text(
                   'OMNIBIZ AUTOMATION',
                   style: pw.TextStyle(
-                      fontWeight: pw.FontWeight.bold, fontSize: 14),
+                    fontWeight: pw.FontWeight.bold,
+                    fontSize: 14,
+                  ),
                 ),
               ),
               pw.Center(child: pw.Text('Sistema de Gestión Inteligente')),
@@ -87,10 +89,14 @@ abstract final class ReceiptService {
               pw.Row(
                 mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                 children: [
-                  pw.Text('Producto',
-                      style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
-                  pw.Text('Total',
-                      style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
+                  pw.Text(
+                    'Producto',
+                    style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+                  ),
+                  pw.Text(
+                    'Total',
+                    style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+                  ),
                 ],
               ),
               pw.SizedBox(height: 5),
@@ -120,13 +126,19 @@ abstract final class ReceiptService {
               pw.Row(
                 mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                 children: [
-                  pw.Text('TOTAL',
-                      style: pw.TextStyle(
-                          fontWeight: pw.FontWeight.bold, fontSize: 12)),
+                  pw.Text(
+                    'TOTAL',
+                    style: pw.TextStyle(
+                      fontWeight: pw.FontWeight.bold,
+                      fontSize: 12,
+                    ),
+                  ),
                   pw.Text(
                     CurrencyFormatter.format(sale.totalAmount, currency),
                     style: pw.TextStyle(
-                        fontWeight: pw.FontWeight.bold, fontSize: 12),
+                      fontWeight: pw.FontWeight.bold,
+                      fontSize: 12,
+                    ),
                   ),
                 ],
               ),
@@ -158,7 +170,7 @@ abstract final class ReceiptService {
     final folder = Directory('${base!.path}/${AppConstants.receiptFolder}');
     await folder.create(recursive: true);
 
-    final ts   = DateFormat('yyyyMMdd_HHmmss').format(DateTime.now());
+    final ts = DateFormat('yyyyMMdd_HHmmss').format(DateTime.now());
     final file = File('${folder.path}/recibo_${saleId}_$ts.pdf');
     await file.writeAsBytes(bytes);
     return file;
@@ -166,10 +178,7 @@ abstract final class ReceiptService {
 
   // ── Notification ─────────────────────────────────────────────────────────────
 
-  static void _notify(
-    String message, {
-    OmniTone tone = OmniTone.neutral,
-  }) {
+  static void _notify(String message, {OmniTone tone = OmniTone.neutral}) {
     scaffoldMessengerKey.currentState?.showOmni(
       message,
       tone: tone,

@@ -1,8 +1,9 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
-final businessTypeProvider =
-    NotifierProvider<BusinessTypeNotifier, String?>(BusinessTypeNotifier.new);
+final businessTypeProvider = NotifierProvider<BusinessTypeNotifier, String?>(
+  BusinessTypeNotifier.new,
+);
 
 class BusinessTypeNotifier extends Notifier<String?> {
   final _storage = const FlutterSecureStorage();

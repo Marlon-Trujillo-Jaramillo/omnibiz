@@ -29,7 +29,7 @@ final routerProvider = Provider<GoRouter>((ref) {
     refreshListenable: authListenable,
     redirect: (context, state) {
       final auth = ref.read(authProvider);
-      final loc  = state.matchedLocation;
+      final loc = state.matchedLocation;
 
       switch (auth.status) {
         // Mientras se lee el almacenamiento seguro nada es accesible.
@@ -54,14 +54,8 @@ final routerProvider = Provider<GoRouter>((ref) {
       }
     },
     routes: [
-      GoRoute(
-        path: AppRoutes.splash,
-        builder: (_, __) => const SplashScreen(),
-      ),
-      GoRoute(
-        path: AppRoutes.auth,
-        builder: (_, __) => const LockScreen(),
-      ),
+      GoRoute(path: AppRoutes.splash, builder: (_, __) => const SplashScreen()),
+      GoRoute(path: AppRoutes.auth, builder: (_, __) => const LockScreen()),
       GoRoute(
         path: AppRoutes.authSetup,
         builder: (_, __) => const LockScreen(setupMode: true),

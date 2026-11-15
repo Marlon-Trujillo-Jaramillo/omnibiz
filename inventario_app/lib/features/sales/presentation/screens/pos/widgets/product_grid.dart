@@ -140,8 +140,10 @@ class _ProductSearchAndGridState extends ConsumerState<ProductSearchAndGrid> {
 }
 
 const double _aspect = 1.2;
+
 /// Alto fijo de la tarjeta: ícono, nombre (2 líneas) y precio.
 const double _tileHeight = OmniSizes.avatarXl * 2 + OmniSpacing.md;
+
 /// Ancho máximo de una tarjeta: más columnas en tablets anchas.
 const double _maxTileWidth = 200;
 

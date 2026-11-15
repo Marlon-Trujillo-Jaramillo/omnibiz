@@ -19,8 +19,10 @@ class ProductEntity {
   final int id;
   final String name;
   final String category;
+
   /// Centavos (ver `Money`).
   final int price;
+
   /// Centavos (ver `Money`).
   final int costPrice;
   final int stock;
@@ -35,27 +37,37 @@ class ProductEntity {
   // `<=`: un stock negativo (datos corruptos/importados) también es agotado.
   bool get isOutOfStock => stock <= 0;
   double get margin => price > 0 ? (price - costPrice) / price : 0;
+
   /// Centavos.
   int get profit => price - costPrice;
 
   ProductEntity copyWith({
-    int? id, String? name, String? category, int? price, int? costPrice,
-    int? stock, String? sku, List<String>? variants, DateTime? createdAt,
-    DateTime? updatedAt, int? storeId, String? barcode,
+    int? id,
+    String? name,
+    String? category,
+    int? price,
+    int? costPrice,
+    int? stock,
+    String? sku,
+    List<String>? variants,
+    DateTime? createdAt,
+    DateTime? updatedAt,
+    int? storeId,
+    String? barcode,
   }) {
     return ProductEntity(
-      id:         id         ?? this.id,
-      name:       name       ?? this.name,
-      category:   category   ?? this.category,
-      price:      price      ?? this.price,
-      costPrice:  costPrice  ?? this.costPrice,
-      stock:      stock      ?? this.stock,
-      sku:        sku        ?? this.sku,
-      variants:   variants   ?? this.variants,
-      createdAt:  createdAt  ?? this.createdAt,
-      updatedAt:  updatedAt  ?? this.updatedAt,
-      storeId:    storeId    ?? this.storeId,
-      barcode:    barcode    ?? this.barcode,
+      id: id ?? this.id,
+      name: name ?? this.name,
+      category: category ?? this.category,
+      price: price ?? this.price,
+      costPrice: costPrice ?? this.costPrice,
+      stock: stock ?? this.stock,
+      sku: sku ?? this.sku,
+      variants: variants ?? this.variants,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+      storeId: storeId ?? this.storeId,
+      barcode: barcode ?? this.barcode,
     );
   }
 }
@@ -75,9 +87,9 @@ class CategoryEntity {
 
   CategoryEntity copyWith({int? id, String? name, String? icon, int? storeId}) {
     return CategoryEntity(
-      id:      id      ?? this.id,
-      name:    name    ?? this.name,
-      icon:    icon    ?? this.icon,
+      id: id ?? this.id,
+      name: name ?? this.name,
+      icon: icon ?? this.icon,
       storeId: storeId ?? this.storeId,
     );
   }

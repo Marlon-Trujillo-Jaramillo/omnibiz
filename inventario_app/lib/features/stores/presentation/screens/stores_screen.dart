@@ -8,11 +8,11 @@ import 'package:inventario_app/features/stores/presentation/providers/stores_not
 import 'package:inventario_app/shared/providers/current_store_provider.dart';
 
 final _kStoreIcons = <String, IconData>{
-  'store':    LucideIcons.store,
+  'store': LucideIcons.store,
   'building': LucideIcons.building,
   'building2': LucideIcons.building2,
   'warehouse': LucideIcons.warehouse,
-  'mapPin':   LucideIcons.mapPin,
+  'mapPin': LucideIcons.mapPin,
   'landmark': LucideIcons.landmark,
 };
 
@@ -25,7 +25,7 @@ class StoresScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final storesAsync = ref.watch(storesProvider);
-    final currentId   = ref.watch(currentStoreProvider);
+    final currentId = ref.watch(currentStoreProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -61,11 +61,12 @@ class StoresScreen extends ConsumerWidget {
     );
   }
 
-  static void _openSheet(BuildContext context, WidgetRef ref, StoreEntity? existing) {
-    showOmniSheet(
-      context,
-      builder: (_) => _StoreSheet(existing: existing),
-    );
+  static void _openSheet(
+    BuildContext context,
+    WidgetRef ref,
+    StoreEntity? existing,
+  ) {
+    showOmniSheet(context, builder: (_) => _StoreSheet(existing: existing));
   }
 }
 
@@ -109,7 +110,11 @@ class _StoreTile extends ConsumerWidget {
           ? null
           : () => ref.read(currentStoreProvider.notifier).set(store.id),
       padding: const EdgeInsets.fromLTRB(
-          OmniSpacing.md, OmniSpacing.md, OmniSpacing.xs, OmniSpacing.md),
+        OmniSpacing.md,
+        OmniSpacing.md,
+        OmniSpacing.xs,
+        OmniSpacing.md,
+      ),
       child: Row(
         children: [
           OmniIconAvatar(icon: _iconFor(store.icon)),
@@ -121,15 +126,21 @@ class _StoreTile extends ConsumerWidget {
                 Row(
                   children: [
                     Flexible(
-                      child: Text(store.name,
-                          style: context.text.bodyMd
-                              .copyWith(fontWeight: FontWeight.w600),
-                          overflow: TextOverflow.ellipsis),
+                      child: Text(
+                        store.name,
+                        style: context.text.bodyMd.copyWith(
+                          fontWeight: FontWeight.w600,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ),
                     if (isActive) ...[
                       const SizedBox(width: OmniSpacing.sm),
                       const OmniTag(
-                          label: 'Activa', tone: OmniTone.brand, dense: true),
+                        label: 'Activa',
+                        tone: OmniTone.brand,
+                        dense: true,
+                      ),
                     ],
                   ],
                 ),
@@ -167,9 +178,13 @@ class _TileActions extends ConsumerWidget {
         ),
         IconButton(
           tooltip: 'Eliminar',
-          icon: Icon(LucideIcons.trash2,
-              size: OmniSizes.iconSm + 2,
-              color: canDelete ? context.colors.danger : context.colors.textDisabled),
+          icon: Icon(
+            LucideIcons.trash2,
+            size: OmniSizes.iconSm + 2,
+            color: canDelete
+                ? context.colors.danger
+                : context.colors.textDisabled,
+          ),
           onPressed: canDelete ? () => _confirmDelete(context, ref) : null,
         ),
       ],
@@ -180,7 +195,8 @@ class _TileActions extends ConsumerWidget {
     final confirmed = await OmniConfirmDialog.show(
       context,
       title: 'Eliminar sucursal',
-      body: '¿Eliminar "${store.name}"? Solo se puede eliminar una sucursal '
+      body:
+          '¿Eliminar "${store.name}"? Solo se puede eliminar una sucursal '
           'sin productos, ventas ni clientes.',
       confirmLabel: 'Eliminar',
       destructive: true,
@@ -195,8 +211,10 @@ class _TileActions extends ConsumerWidget {
       messenger.showOmni(e.message, tone: OmniTone.danger);
       return;
     } catch (_) {
-      messenger.showOmni('No se pudo eliminar la sucursal.',
-          tone: OmniTone.danger);
+      messenger.showOmni(
+        'No se pudo eliminar la sucursal.',
+        tone: OmniTone.danger,
+      );
       return;
     }
 
@@ -229,8 +247,8 @@ class _StoreSheetState extends ConsumerState<_StoreSheet> {
   @override
   void initState() {
     super.initState();
-    _nameCtrl     = TextEditingController(text: widget.existing?.name ?? '');
-    _addressCtrl  = TextEditingController(text: widget.existing?.address ?? '');
+    _nameCtrl = TextEditingController(text: widget.existing?.name ?? '');
+    _addressCtrl = TextEditingController(text: widget.existing?.address ?? '');
     _selectedIcon = widget.existing?.icon ?? 'store';
   }
 
@@ -248,11 +266,11 @@ class _StoreSheetState extends ConsumerState<_StoreSheet> {
 
     final address = _addressCtrl.text.trim();
     final store = StoreEntity(
-      id:        _isEdit ? widget.existing!.id : 0,
-      name:      name,
-      icon:      _selectedIcon,
+      id: _isEdit ? widget.existing!.id : 0,
+      name: name,
+      icon: _selectedIcon,
       createdAt: widget.existing?.createdAt ?? DateTime.now(),
-      address:   address.isEmpty ? null : address,
+      address: address.isEmpty ? null : address,
     );
 
     final messenger = ScaffoldMessenger.of(context);
@@ -261,8 +279,10 @@ class _StoreSheetState extends ConsumerState<_StoreSheet> {
     } catch (_) {
       // Antes el botón quedaba cargando para siempre si fallaba el guardado.
       if (mounted) setState(() => _loading = false);
-      messenger.showOmni('No se pudo guardar la sucursal.',
-          tone: OmniTone.danger);
+      messenger.showOmni(
+        'No se pudo guardar la sucursal.',
+        tone: OmniTone.danger,
+      );
       return;
     }
 
@@ -287,35 +307,35 @@ class _StoreSheetState extends ConsumerState<_StoreSheet> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-            OmniTextField(
-              controller: _nameCtrl,
-              label: 'Nombre',
-              hint: 'Ej: Sucursal Centro, Bodega Norte',
-              textInputAction: TextInputAction.next,
-            ),
-            const SizedBox(height: OmniSpacing.base),
-            OmniTextField(
-              controller: _addressCtrl,
-              label: 'Dirección (opcional)',
-              hint: 'Ej: Calle 10 # 5-20',
-              textInputAction: TextInputAction.done,
-            ),
-            const SizedBox(height: OmniSpacing.xl),
-            Text('ÍCONO', style: context.text.overline),
-            const SizedBox(height: OmniSpacing.md),
-            _IconPicker(
-              selected: _selectedIcon,
-              onSelect: (k) => setState(() => _selectedIcon = k),
-            ),
-            const SizedBox(height: OmniSpacing.xxl),
-            OmniButton(
-              label: _isEdit ? 'Guardar cambios' : 'Crear sucursal',
-              onPressed: _loading ? null : _save,
-              loading: _loading,
-              fullWidth: true,
-              size: OmniButtonSize.lg,
-              icon: _isEdit ? LucideIcons.save : LucideIcons.plus,
-            ),
+          OmniTextField(
+            controller: _nameCtrl,
+            label: 'Nombre',
+            hint: 'Ej: Sucursal Centro, Bodega Norte',
+            textInputAction: TextInputAction.next,
+          ),
+          const SizedBox(height: OmniSpacing.base),
+          OmniTextField(
+            controller: _addressCtrl,
+            label: 'Dirección (opcional)',
+            hint: 'Ej: Calle 10 # 5-20',
+            textInputAction: TextInputAction.done,
+          ),
+          const SizedBox(height: OmniSpacing.xl),
+          Text('ÍCONO', style: context.text.overline),
+          const SizedBox(height: OmniSpacing.md),
+          _IconPicker(
+            selected: _selectedIcon,
+            onSelect: (k) => setState(() => _selectedIcon = k),
+          ),
+          const SizedBox(height: OmniSpacing.xxl),
+          OmniButton(
+            label: _isEdit ? 'Guardar cambios' : 'Crear sucursal',
+            onPressed: _loading ? null : _save,
+            loading: _loading,
+            fullWidth: true,
+            size: OmniButtonSize.lg,
+            icon: _isEdit ? LucideIcons.save : LucideIcons.plus,
+          ),
         ],
       ),
     );
@@ -334,12 +354,14 @@ class _IconPicker extends StatelessWidget {
       spacing: OmniSpacing.sm,
       runSpacing: OmniSpacing.sm,
       children: _kStoreIcons.entries
-          .map((e) => _IconOption(
-                iconKey: e.key,
-                iconData: e.value,
-                selected: selected == e.key,
-                onTap: () => onSelect(e.key),
-              ))
+          .map(
+            (e) => _IconOption(
+              iconKey: e.key,
+              iconData: e.value,
+              selected: selected == e.key,
+              onTap: () => onSelect(e.key),
+            ),
+          )
           .toList(),
     );
   }

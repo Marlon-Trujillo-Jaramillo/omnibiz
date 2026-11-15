@@ -6,23 +6,19 @@ import 'package:inventario_app/features/inventory/domain/entities/product_entity
 int _dbCounter = 0;
 String _dbName() => 'products_${_dbCounter++}.db';
 
-ProductEntity _entity({
-  int id = 0,
-  String name = 'Café',
-  int stock = 10,
-}) =>
+ProductEntity _entity({int id = 0, String name = 'Café', int stock = 10}) =>
     ProductEntity(
-      id:        id,
-      name:      name,
-      category:  'Bebidas',
-      price:     3000,
+      id: id,
+      name: name,
+      category: 'Bebidas',
+      price: 3000,
       costPrice: 1500,
-      stock:     stock,
-      sku:       'SKU-001',
-      variants:  [],
+      stock: stock,
+      sku: 'SKU-001',
+      variants: [],
       createdAt: DateTime(2024),
       updatedAt: DateTime(2024),
-      storeId:   0,
+      storeId: 0,
     );
 
 void main() {
@@ -32,8 +28,8 @@ void main() {
 
   setUp(() async {
     dbName = _dbName();
-    db     = await databaseFactoryMemory.openDatabase(dbName);
-    repo   = SembastProductRepository(db);
+    db = await databaseFactoryMemory.openDatabase(dbName);
+    repo = SembastProductRepository(db);
   });
 
   tearDown(() async {
@@ -88,7 +84,12 @@ void main() {
 
   group('categorías', () {
     test('guardar y listar', () async {
-      const cat = CategoryEntity(id: 0, name: 'Bebidas', icon: 'cup', storeId: 0);
+      const cat = CategoryEntity(
+        id: 0,
+        name: 'Bebidas',
+        icon: 'cup',
+        storeId: 0,
+      );
       await repo.saveCategory(cat);
       final all = await repo.getAllCategories(storeId: 0);
       expect(all, hasLength(1));
@@ -96,7 +97,12 @@ void main() {
     });
 
     test('eliminar categoría', () async {
-      const cat = CategoryEntity(id: 0, name: 'Snacks', icon: 'food', storeId: 0);
+      const cat = CategoryEntity(
+        id: 0,
+        name: 'Snacks',
+        icon: 'food',
+        storeId: 0,
+      );
       await repo.saveCategory(cat);
       final id = (await repo.getAllCategories(storeId: 0)).first.id;
       await repo.deleteCategory(id);

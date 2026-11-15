@@ -13,17 +13,17 @@ class _FakeCurrentStore extends CurrentStoreNotifier {
 }
 
 SaleEntity _sale(DateTime createdAt) => SaleEntity(
-      id: 0,
-      items: const [],
-      totalAmount: 100,
-      taxAmount: 0,
-      discountAmount: 0,
-      paymentMethod: PaymentMethods.cash,
-      businessContext: 'generic',
-      createdAt: createdAt,
-      storeId: 1,
-      currencyCode: 'COP',
-    );
+  id: 0,
+  items: const [],
+  totalAmount: 100,
+  taxAmount: 0,
+  discountAmount: 0,
+  paymentMethod: PaymentMethods.cash,
+  businessContext: 'generic',
+  createdAt: createdAt,
+  storeId: 1,
+  currencyCode: 'COP',
+);
 
 int _n = 0;
 
@@ -38,11 +38,13 @@ void main() {
           .store('sales')
           .add(db, _sale(DateTime(2024, 1, d, 12)).toModel().toMap());
     }
-    c = ProviderContainer(overrides: [
-      databaseProvider.overrideWithValue(db),
-      currentStoreProvider.overrideWith(_FakeCurrentStore.new),
-      salesPageSizeProvider.overrideWithValue(3),
-    ]);
+    c = ProviderContainer(
+      overrides: [
+        databaseProvider.overrideWithValue(db),
+        currentStoreProvider.overrideWith(_FakeCurrentStore.new),
+        salesPageSizeProvider.overrideWithValue(3),
+      ],
+    );
   });
 
   tearDown(() async {

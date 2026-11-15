@@ -21,11 +21,11 @@ class StoreEntity {
     String? address,
   }) {
     return StoreEntity(
-      id:        id        ?? this.id,
-      name:      name      ?? this.name,
-      icon:      icon      ?? this.icon,
+      id: id ?? this.id,
+      name: name ?? this.name,
+      icon: icon ?? this.icon,
       createdAt: createdAt ?? this.createdAt,
-      address:   address   ?? this.address,
+      address: address ?? this.address,
     );
   }
 }

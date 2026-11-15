@@ -16,11 +16,11 @@ class SettingsScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final currency      = ref.watch(currencyProvider);
-    final themeMode     = ref.watch(themeModeProvider);
-    final currentId     = ref.watch(currentStoreProvider);
-    final storesAsync   = ref.watch(storesProvider);
-    final currentStore  = storesAsync.valueOrNull
+    final currency = ref.watch(currencyProvider);
+    final themeMode = ref.watch(themeModeProvider);
+    final currentId = ref.watch(currentStoreProvider);
+    final storesAsync = ref.watch(storesProvider);
+    final currentStore = storesAsync.valueOrNull
         ?.where((s) => s.id == currentId)
         .firstOrNull;
 
@@ -30,18 +30,28 @@ class SettingsScreen extends ConsumerWidget {
         maxWidth: OmniBreakpoints.tablet + OmniSpacing.xxxl * 2,
         child: ListView(
           padding: const EdgeInsets.fromLTRB(
-              OmniSpacing.base, OmniSpacing.sm, OmniSpacing.base, OmniSpacing.xxl),
+            OmniSpacing.base,
+            OmniSpacing.sm,
+            OmniSpacing.base,
+            OmniSpacing.xxl,
+          ),
           children: [
             const _SectionHeader('Apariencia'),
             OmniCard(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Text('Tema', style: context.text.bodyMd
-                      .copyWith(fontWeight: FontWeight.w600)),
+                  Text(
+                    'Tema',
+                    style: context.text.bodyMd.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
                   const SizedBox(height: OmniSpacing.xxs),
-                  Text('"Sistema" sigue el modo claro/oscuro del dispositivo.',
-                      style: context.text.caption),
+                  Text(
+                    '"Sistema" sigue el modo claro/oscuro del dispositivo.',
+                    style: context.text.caption,
+                  ),
                   const SizedBox(height: OmniSpacing.md),
                   SegmentedButton<ThemeMode>(
                     showSelectedIcon: false,
@@ -49,8 +59,10 @@ class SettingsScreen extends ConsumerWidget {
                       ButtonSegment(
                         value: ThemeMode.system,
                         label: Text('Sistema'),
-                        icon: Icon(LucideIcons.monitorSmartphone,
-                            size: OmniSizes.iconSm),
+                        icon: Icon(
+                          LucideIcons.monitorSmartphone,
+                          size: OmniSizes.iconSm,
+                        ),
                       ),
                       ButtonSegment(
                         value: ThemeMode.light,
@@ -95,10 +107,7 @@ class SettingsScreen extends ConsumerWidget {
               ),
             ),
             const SizedBox(height: OmniSpacing.md),
-            const OmniBanner(
-              tone: OmniTone.warning,
-              message: _currencyWarning,
-            ),
+            const OmniBanner(tone: OmniTone.warning, message: _currencyWarning),
             const _SectionHeader('Vista previa'),
             _PreviewCard(currency: currency),
           ],
@@ -151,14 +160,20 @@ class _StoresTile extends StatelessWidget {
               children: [
                 Text('Sucursal activa', style: context.text.caption),
                 const SizedBox(height: OmniSpacing.xxs),
-                Text(storeName,
-                    style: context.text.bodyMd
-                        .copyWith(fontWeight: FontWeight.w600)),
+                Text(
+                  storeName,
+                  style: context.text.bodyMd.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
               ],
             ),
           ),
-          Icon(LucideIcons.chevronRight,
-              size: OmniSizes.iconSm, color: context.colors.textMuted),
+          Icon(
+            LucideIcons.chevronRight,
+            size: OmniSizes.iconSm,
+            color: context.colors.textMuted,
+          ),
         ],
       ),
     );
@@ -172,10 +187,14 @@ class _SectionHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.fromLTRB(
-            OmniSpacing.xs, OmniSpacing.xl, 0, OmniSpacing.sm),
-        child: Text(title.toUpperCase(), style: context.text.overline),
-      );
+    padding: const EdgeInsets.fromLTRB(
+      OmniSpacing.xs,
+      OmniSpacing.xl,
+      0,
+      OmniSpacing.sm,
+    ),
+    child: Text(title.toUpperCase(), style: context.text.overline),
+  );
 }
 
 // ── Currency tile ──────────────────────────────────────────────────────────────
@@ -213,14 +232,18 @@ class _CurrencyTile extends StatelessWidget {
             AnimatedSwitcher(
               duration: OmniMotion.base,
               child: selected
-                  ? Icon(LucideIcons.checkCircle2,
+                  ? Icon(
+                      LucideIcons.checkCircle2,
                       key: const ValueKey(true),
                       color: c.primaryText,
-                      size: OmniSizes.iconMd)
-                  : Icon(LucideIcons.circle,
+                      size: OmniSizes.iconMd,
+                    )
+                  : Icon(
+                      LucideIcons.circle,
                       key: const ValueKey(false),
                       color: c.borderWeak,
-                      size: OmniSizes.iconMd),
+                      size: OmniSizes.iconMd,
+                    ),
             ),
           ],
         ),
@@ -239,14 +262,22 @@ class _PreviewCard extends StatelessWidget {
     return OmniCard(
       child: Column(
         children: [
-          _PreviewRow(label: 'Precio pequeño',
-              value: CurrencyFormatter.format(999_000, currency)),
-          _PreviewRow(label: 'Precio mediano',
-              value: CurrencyFormatter.format(12_500_000, currency)),
-          _PreviewRow(label: 'Precio grande',
-              value: CurrencyFormatter.format(150_000_000, currency)),
-          _PreviewRow(label: 'Formato compacto',
-              value: CurrencyFormatter.compact(250_000_000, currency)),
+          _PreviewRow(
+            label: 'Precio pequeño',
+            value: CurrencyFormatter.format(999_000, currency),
+          ),
+          _PreviewRow(
+            label: 'Precio mediano',
+            value: CurrencyFormatter.format(12_500_000, currency),
+          ),
+          _PreviewRow(
+            label: 'Precio grande',
+            value: CurrencyFormatter.format(150_000_000, currency),
+          ),
+          _PreviewRow(
+            label: 'Formato compacto',
+            value: CurrencyFormatter.compact(250_000_000, currency),
+          ),
         ],
       ),
     );

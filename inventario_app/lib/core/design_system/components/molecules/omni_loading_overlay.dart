@@ -49,7 +49,8 @@ class OmniLoadingOverlay extends StatelessWidget {
                           width: OmniSizes.iconXl,
                           height: OmniSizes.iconXl,
                           child: CircularProgressIndicator(
-                              strokeWidth: OmniSizes.stroke + 0.5),
+                            strokeWidth: OmniSizes.stroke + 0.5,
+                          ),
                         ),
                         if (label != null) ...[
                           const SizedBox(height: OmniSpacing.base),

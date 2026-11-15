@@ -14,10 +14,16 @@ void main() {
 
   setUp(() async {
     dbName = 'stores_${_dbCounter++}.db';
-    db     = await databaseFactoryMemory.openDatabase(dbName);
-    repo   = SembastStoreRepository(db);
-    await repo.save(StoreEntity(
-        id: 0, name: 'Centro', icon: 'store', createdAt: DateTime(2024)));
+    db = await databaseFactoryMemory.openDatabase(dbName);
+    repo = SembastStoreRepository(db);
+    await repo.save(
+      StoreEntity(
+        id: 0,
+        name: 'Centro',
+        icon: 'store',
+        createdAt: DateTime(2024),
+      ),
+    );
     storeId = (await repo.getAll()).single.id;
   });
 
@@ -46,8 +52,13 @@ void main() {
 
       await expectLater(
         repo.delete(storeId),
-        throwsA(isA<StoreInUseException>()
-            .having((e) => e.message, 'message', contains('No se puede eliminar'))),
+        throwsA(
+          isA<StoreInUseException>().having(
+            (e) => e.message,
+            'message',
+            contains('No se puede eliminar'),
+          ),
+        ),
       );
       expect(await repo.getAll(), hasLength(1));
     });

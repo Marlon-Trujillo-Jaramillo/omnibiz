@@ -6,10 +6,7 @@ import 'package:inventario_app/shared/providers/current_store_provider.dart';
 // ── Session state ──────────────────────────────────────────────────────────────
 
 class PosSessionState {
-  const PosSessionState({
-    this.items = const [],
-    this.selectedCustomerId,
-  });
+  const PosSessionState({this.items = const [], this.selectedCustomerId});
 
   final List<CartItemEntity> items;
   final int? selectedCustomerId;
@@ -21,20 +18,22 @@ class PosSessionState {
   }) {
     return PosSessionState(
       items: items ?? this.items,
-      selectedCustomerId:
-          clearCustomer ? null : (selectedCustomerId ?? this.selectedCustomerId),
+      selectedCustomerId: clearCustomer
+          ? null
+          : (selectedCustomerId ?? this.selectedCustomerId),
     );
   }
 
   /// Centavos.
-  int    get total    => items.fold(0,   (sum, i) => sum + i.totalPrice);
-  int    get itemCount => items.fold(0,   (sum, i) => sum + i.quantity);
+  int get total => items.fold(0, (sum, i) => sum + i.totalPrice);
+  int get itemCount => items.fold(0, (sum, i) => sum + i.quantity);
 }
 
 // ── Provider ───────────────────────────────────────────────────────────────────
 
-final cartProvider =
-    NotifierProvider<CartNotifier, PosSessionState>(CartNotifier.new);
+final cartProvider = NotifierProvider<CartNotifier, PosSessionState>(
+  CartNotifier.new,
+);
 
 // ── Notifier ───────────────────────────────────────────────────────────────────
 
@@ -60,16 +59,18 @@ class CartNotifier extends Notifier<PosSessionState> {
         ],
       );
     } else {
-      state = state.copyWith(items: [
-        ...state.items,
-        CartItemEntity(
-          productId:        product.id,
-          productName:      product.name,
-          quantity:         1,
-          unitPrice:        product.price,
-          selectedVariants: variants,
-        ),
-      ]);
+      state = state.copyWith(
+        items: [
+          ...state.items,
+          CartItemEntity(
+            productId: product.id,
+            productName: product.name,
+            quantity: 1,
+            unitPrice: product.price,
+            selectedVariants: variants,
+          ),
+        ],
+      );
     }
   }
 
@@ -133,8 +134,11 @@ class CartNotifier extends Notifier<PosSessionState> {
 
   /// Adds [quantity] units of [product] in one shot instead of tapping
   /// the product tile repeatedly.
-  void addProductQuantity(ProductEntity product, int quantity,
-      {List<String> variants = const []}) {
+  void addProductQuantity(
+    ProductEntity product,
+    int quantity, {
+    List<String> variants = const [],
+  }) {
     if (quantity <= 0) return;
     final idx = state.items.indexWhere((i) => i.productId == product.id);
     if (idx >= 0) {
@@ -142,23 +146,26 @@ class CartNotifier extends Notifier<PosSessionState> {
         items: [
           for (int i = 0; i < state.items.length; i++)
             if (i == idx)
-              state.items[i]
-                  .copyWith(quantity: state.items[i].quantity + quantity)
+              state.items[i].copyWith(
+                quantity: state.items[i].quantity + quantity,
+              )
             else
               state.items[i],
         ],
       );
     } else {
-      state = state.copyWith(items: [
-        ...state.items,
-        CartItemEntity(
-          productId:        product.id,
-          productName:      product.name,
-          quantity:         quantity,
-          unitPrice:        product.price,
-          selectedVariants: variants,
-        ),
-      ]);
+      state = state.copyWith(
+        items: [
+          ...state.items,
+          CartItemEntity(
+            productId: product.id,
+            productName: product.name,
+            quantity: quantity,
+            unitPrice: product.price,
+            selectedVariants: variants,
+          ),
+        ],
+      );
     }
   }
 

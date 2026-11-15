@@ -14,9 +14,9 @@ import 'package:inventario_app/features/sales/presentation/providers/sales_notif
 enum _Period { today, week, month, all }
 
 final _periodProvider = StateProvider.autoDispose<_Period>(
-    (ref) => _Period.all);
-final _methodFilterProvider = StateProvider.autoDispose<String?>(
-    (ref) => null);
+  (ref) => _Period.all,
+);
+final _methodFilterProvider = StateProvider.autoDispose<String?>((ref) => null);
 
 // ── Screen ─────────────────────────────────────────────────────────────────────
 class SalesHistoryScreen extends ConsumerWidget {
@@ -24,11 +24,11 @@ class SalesHistoryScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final period     = ref.watch(_periodProvider);
-    final method     = ref.watch(_methodFilterProvider);
+    final period = ref.watch(_periodProvider);
+    final method = ref.watch(_methodFilterProvider);
     // Filtros aplicados en la consulta: se pagina sobre el resultado filtrado.
-    final query      = (from: _periodStart(period), paymentMethod: method);
-    final provider   = salesHistoryProvider(query);
+    final query = (from: _periodStart(period), paymentMethod: method);
+    final provider = salesHistoryProvider(query);
     final salesAsync = ref.watch(provider);
 
     return Scaffold(
@@ -70,11 +70,11 @@ class SalesHistoryScreen extends ConsumerWidget {
   /// Inicio (inclusivo) del período en días calendario; null = todo.
   /// Medianoche → clave de provider estable durante el día.
   static DateTime? _periodStart(_Period period) => switch (period) {
-        _Period.all   => null,
-        _Period.today => lastDaysRange(1).from,
-        _Period.week  => lastDaysRange(7).from,
-        _Period.month => lastDaysRange(30).from,
-      };
+    _Period.all => null,
+    _Period.today => lastDaysRange(1).from,
+    _Period.week => lastDaysRange(7).from,
+    _Period.month => lastDaysRange(30).from,
+  };
 }
 
 // ── Filter bar ─────────────────────────────────────────────────────────────────
@@ -84,8 +84,8 @@ class _FilterBar extends ConsumerWidget {
   final String? method;
 
   static const _periods = [
-    (label: 'Todo',   value: _Period.all),
-    (label: 'Hoy',    value: _Period.today),
+    (label: 'Todo', value: _Period.all),
+    (label: 'Hoy', value: _Period.today),
     (label: '7 días', value: _Period.week),
     (label: '30 días', value: _Period.month),
   ];
@@ -99,7 +99,11 @@ class _FilterBar extends ConsumerWidget {
       children: [
         Padding(
           padding: const EdgeInsets.fromLTRB(
-              OmniSpacing.base, OmniSpacing.xs, OmniSpacing.base, 0),
+            OmniSpacing.base,
+            OmniSpacing.xs,
+            OmniSpacing.base,
+            0,
+          ),
           child: SegmentedButton<_Period>(
             showSelectedIcon: false,
             segments: [
@@ -116,7 +120,9 @@ class _FilterBar extends ConsumerWidget {
           child: ListView(
             scrollDirection: Axis.horizontal,
             padding: const EdgeInsets.symmetric(
-                horizontal: OmniSpacing.base, vertical: OmniSpacing.md),
+              horizontal: OmniSpacing.base,
+              vertical: OmniSpacing.md,
+            ),
             children: [
               OmniSelectableChip(
                 label: 'Todos los métodos',
@@ -144,16 +150,16 @@ class _FilterBar extends ConsumerWidget {
 }
 
 IconData _methodIcon(String method) => switch (method) {
-      PaymentMethods.card   => LucideIcons.creditCard,
-      PaymentMethods.credit => LucideIcons.notebookPen,
-      _                     => LucideIcons.banknote,
-    };
+  PaymentMethods.card => LucideIcons.creditCard,
+  PaymentMethods.credit => LucideIcons.notebookPen,
+  _ => LucideIcons.banknote,
+};
 
 OmniTone _methodTone(String method) => switch (method) {
-      PaymentMethods.card   => OmniTone.info,
-      PaymentMethods.credit => OmniTone.warning,
-      _                     => OmniTone.success,
-    };
+  PaymentMethods.card => OmniTone.info,
+  PaymentMethods.credit => OmniTone.warning,
+  _ => OmniTone.success,
+};
 
 String _dayLabel(DateTime d) {
   final today = lastDaysRange(1).from;
@@ -188,7 +194,11 @@ class _SalesList extends ConsumerWidget {
       child: ListView.builder(
         physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.fromLTRB(
-            OmniSpacing.base, OmniSpacing.sm, OmniSpacing.base, OmniSpacing.xxl),
+          OmniSpacing.base,
+          OmniSpacing.sm,
+          OmniSpacing.base,
+          OmniSpacing.xxl,
+        ),
         itemCount: rows.length + (history.hasMore ? 1 : 0),
         itemBuilder: (_, i) {
           if (i == rows.length) {
@@ -208,9 +218,10 @@ class _SalesList extends ConsumerWidget {
           if (row is String) {
             return Padding(
               padding: EdgeInsets.only(
-                  top: i == 0 ? OmniSpacing.sm : OmniSpacing.lg,
-                  bottom: OmniSpacing.sm,
-                  left: OmniSpacing.xs),
+                top: i == 0 ? OmniSpacing.sm : OmniSpacing.lg,
+                bottom: OmniSpacing.sm,
+                left: OmniSpacing.xs,
+              ),
               child: Text(row.toUpperCase(), style: context.text.overline),
             );
           }
@@ -251,7 +262,8 @@ class _SaleTile extends ConsumerWidget {
     final c = context.colors;
     final tone = _methodTone(sale.paymentMethod);
     return OmniCard(
-      onTap: () => showOmniSheet(context, builder: (_) => _SaleDetailSheet(sale)),
+      onTap: () =>
+          showOmniSheet(context, builder: (_) => _SaleDetailSheet(sale)),
       padding: const EdgeInsets.all(OmniSpacing.md),
       child: Row(
         children: [
@@ -265,10 +277,12 @@ class _SaleTile extends ConsumerWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Ticket #${sale.id}',
-                    style: context.text.bodyMd
-                        .copyWith(fontWeight: FontWeight.w600)
-                        .tabular),
+                Text(
+                  'Ticket #${sale.id}',
+                  style: context.text.bodyMd
+                      .copyWith(fontWeight: FontWeight.w600)
+                      .tabular,
+                ),
                 const SizedBox(height: OmniSpacing.xxs),
                 Text(
                   '${DateFormatter.time(sale.createdAt)} · '
@@ -320,21 +334,31 @@ class _SaleDetailSheet extends ConsumerWidget {
               children: [
                 for (final item in sale.items)
                   Padding(
-                    padding: const EdgeInsets.symmetric(vertical: OmniSpacing.xs),
+                    padding: const EdgeInsets.symmetric(
+                      vertical: OmniSpacing.xs,
+                    ),
                     child: Row(
                       children: [
                         SizedBox(
                           width: OmniSpacing.xxl + OmniSpacing.xs,
-                          child: Text('${item.quantity}×',
-                              style: context.text.moneySm
-                                  .copyWith(color: c.textMuted)),
+                          child: Text(
+                            '${item.quantity}×',
+                            style: context.text.moneySm.copyWith(
+                              color: c.textMuted,
+                            ),
+                          ),
                         ),
                         Expanded(
-                          child: Text(item.productName,
-                              style: context.text.bodyMd),
+                          child: Text(
+                            item.productName,
+                            style: context.text.bodyMd,
+                          ),
                         ),
                         Text(
-                          ref.formatSaleMoney(item.totalPrice, sale.currencyCode),
+                          ref.formatSaleMoney(
+                            item.totalPrice,
+                            sale.currencyCode,
+                          ),
                           style: context.text.moneySm,
                         ),
                       ],

@@ -29,6 +29,7 @@ abstract final class OmniSizes {
 
   /// Punto del PIN.
   static const double pinDot = 14;
+
   /// Ancho máximo de un panel lateral (carrito en tablet).
   static const double sidePanel = 400;
 }

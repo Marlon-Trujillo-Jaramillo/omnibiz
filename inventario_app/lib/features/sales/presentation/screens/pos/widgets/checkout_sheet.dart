@@ -16,8 +16,9 @@ import 'package:inventario_app/shared/providers/currency_provider.dart';
 import 'package:inventario_app/shared/providers/current_store_provider.dart';
 import 'customer_selector.dart';
 
-final _paymentMethodProvider =
-    StateProvider.autoDispose<String>((ref) => PaymentMethods.cash);
+final _paymentMethodProvider = StateProvider.autoDispose<String>(
+  (ref) => PaymentMethods.cash,
+);
 
 class CheckoutSheet extends ConsumerWidget {
   const CheckoutSheet({super.key, required this.businessContext});
@@ -25,14 +26,14 @@ class CheckoutSheet extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final session        = ref.watch(cartProvider);
-    final method         = ref.watch(_paymentMethodProvider);
+    final session = ref.watch(cartProvider);
+    final method = ref.watch(_paymentMethodProvider);
     final selectedCustId = session.selectedCustomerId;
-    final customers      = ref.watch(customersProvider).valueOrNull ?? [];
-    final customer       = selectedCustId != null
+    final customers = ref.watch(customersProvider).valueOrNull ?? [];
+    final customer = selectedCustId != null
         ? customers.where((c) => c.id == selectedCustId).firstOrNull
         : null;
-    final total   = session.total;
+    final total = session.total;
 
     // Fiado sin cliente no es válido: si se quita el cliente, volver a Efectivo.
     ref.listen(cartProvider.select((s) => s.selectedCustomerId), (_, next) {
@@ -44,7 +45,8 @@ class CheckoutSheet extends ConsumerWidget {
 
     return OmniSheetBody(
       title: 'Cobrar',
-      subtitle: '${session.itemCount} artículo${session.itemCount == 1 ? '' : 's'}',
+      subtitle:
+          '${session.itemCount} artículo${session.itemCount == 1 ? '' : 's'}',
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -62,8 +64,10 @@ class CheckoutSheet extends ConsumerWidget {
           ),
           if (customer == null) ...[
             const SizedBox(height: OmniSpacing.sm),
-            Text('Para vender fiado, selecciona un cliente.',
-                style: context.text.caption),
+            Text(
+              'Para vender fiado, selecciona un cliente.',
+              style: context.text.caption,
+            ),
           ],
           AnimatedSize(
             duration: OmniMotion.base,
@@ -72,7 +76,9 @@ class CheckoutSheet extends ConsumerWidget {
                 ? Padding(
                     padding: const EdgeInsets.only(top: OmniSpacing.md),
                     child: _FiadoWarning(
-                        customerName: customer.name, total: total),
+                      customerName: customer.name,
+                      total: total,
+                    ),
                   )
                 : const SizedBox(width: double.infinity),
           ),
@@ -102,7 +108,9 @@ class _TotalHero extends ConsumerWidget {
     final c = context.colors;
     return Container(
       padding: const EdgeInsets.symmetric(
-          horizontal: OmniSpacing.xl, vertical: OmniSpacing.xl),
+        horizontal: OmniSpacing.xl,
+        vertical: OmniSpacing.xl,
+      ),
       decoration: BoxDecoration(
         color: c.primaryBg,
         borderRadius: OmniRadius.xlAll,
@@ -110,8 +118,10 @@ class _TotalHero extends ConsumerWidget {
       ),
       child: Column(
         children: [
-          Text('Total a cobrar',
-              style: context.text.label.copyWith(color: c.primaryText)),
+          Text(
+            'Total a cobrar',
+            style: context.text.label.copyWith(color: c.primaryText),
+          ),
           const SizedBox(height: OmniSpacing.sm),
           FittedBox(
             fit: BoxFit.scaleDown,
@@ -132,10 +142,10 @@ class _PaymentMethodSelector extends ConsumerWidget {
   final bool creditEnabled;
 
   static IconData _icon(String m) => switch (m) {
-        PaymentMethods.card   => LucideIcons.creditCard,
-        PaymentMethods.credit => LucideIcons.notebookPen,
-        _                     => LucideIcons.banknote,
-      };
+    PaymentMethods.card => LucideIcons.creditCard,
+    PaymentMethods.credit => LucideIcons.notebookPen,
+    _ => LucideIcons.banknote,
+  };
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -144,7 +154,8 @@ class _PaymentMethodSelector extends ConsumerWidget {
       expandedInsets: EdgeInsets.zero,
       style: const ButtonStyle(
         minimumSize: WidgetStatePropertyAll(
-            Size(OmniSizes.controlLg, OmniSizes.controlLg)),
+          Size(OmniSizes.controlLg, OmniSizes.controlLg),
+        ),
       ),
       segments: [
         for (final m in PaymentMethods.all)
@@ -173,7 +184,8 @@ class _FiadoWarning extends ConsumerWidget {
       tone: OmniTone.warning,
       icon: LucideIcons.notebookPen,
       title: 'Venta fiada',
-      message: 'Se sumará ${ref.formatMoney(total)} '
+      message:
+          'Se sumará ${ref.formatMoney(total)} '
           'a la deuda de $customerName.',
     );
   }
@@ -200,14 +212,15 @@ class _ConfirmButtonState extends ConsumerState<_ConfirmButton> {
   Future<void> _confirm(int storeId) async {
     setState(() => _loading = true);
     try {
-      final session      = ref.read(cartProvider);
+      final session = ref.read(cartProvider);
       final cartNotifier = ref.read(cartProvider.notifier);
-      final sale         = _buildSale(session, storeId);
-      final result       = await ref.read(processSaleUseCaseProvider).execute(sale);
+      final sale = _buildSale(session, storeId);
+      final result = await ref.read(processSaleUseCaseProvider).execute(sale);
 
       result.when(
-        onSuccess: (completedSale) => _handleSuccess(cartNotifier, completedSale),
-        onFailure: (failure)       => _handleFailure(ErrorMapper.toMessage(failure)),
+        onSuccess: (completedSale) =>
+            _handleSuccess(cartNotifier, completedSale),
+        onFailure: (failure) => _handleFailure(ErrorMapper.toMessage(failure)),
       );
     } catch (e) {
       _handleFailure('Error inesperado. Intenta de nuevo.');
@@ -217,23 +230,27 @@ class _ConfirmButtonState extends ConsumerState<_ConfirmButton> {
   SaleEntity _buildSale(PosSessionState session, int storeId) {
     return SaleEntity(
       id: 0,
-      items: session.items.map((i) => SaleItemEntity(
-        productId:        i.productId,
-        productName:      i.productName,
-        quantity:         i.quantity,
-        unitPrice:        i.unitPrice,
-        totalPrice:       i.totalPrice,
-        selectedVariants: i.selectedVariants,
-      )).toList(),
-      totalAmount:     widget.total,
-      taxAmount:       0,
-      discountAmount:  0,
-      paymentMethod:   widget.method,
+      items: session.items
+          .map(
+            (i) => SaleItemEntity(
+              productId: i.productId,
+              productName: i.productName,
+              quantity: i.quantity,
+              unitPrice: i.unitPrice,
+              totalPrice: i.totalPrice,
+              selectedVariants: i.selectedVariants,
+            ),
+          )
+          .toList(),
+      totalAmount: widget.total,
+      taxAmount: 0,
+      discountAmount: 0,
+      paymentMethod: widget.method,
       businessContext: widget.businessContext,
-      createdAt:       DateTime.now(),
-      storeId:         storeId,
-      currencyCode:    ref.read(currencyProvider).code,
-      customerId:      session.selectedCustomerId,
+      createdAt: DateTime.now(),
+      storeId: storeId,
+      currencyCode: ref.read(currencyProvider).code,
+      customerId: session.selectedCustomerId,
     );
   }
 
@@ -243,7 +260,10 @@ class _ConfirmButtonState extends ConsumerState<_ConfirmButton> {
     ScaffoldMessenger.of(context).showOmni(message, tone: OmniTone.danger);
   }
 
-  Future<void> _handleSuccess(CartNotifier cartNotifier, SaleEntity sale) async {
+  Future<void> _handleSuccess(
+    CartNotifier cartNotifier,
+    SaleEntity sale,
+  ) async {
     // Invalidate caches and close the UI before showing the receipt dialog.
     // The sale is already saved — receipt is best-effort and must not block recovery.
     ref.invalidate(salesInRangeProvider);

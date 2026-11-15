@@ -42,8 +42,7 @@ class _OmniBizAppState extends ConsumerState<OmniBizApp>
       case AppLifecycleState.resumed:
         final paused = _pausedAt;
         _pausedAt = null;
-        if (paused != null &&
-            DateTime.now().difference(paused) >= _lockAfter) {
+        if (paused != null && DateTime.now().difference(paused) >= _lockAfter) {
           ref.read(authProvider.notifier).lock();
         }
 

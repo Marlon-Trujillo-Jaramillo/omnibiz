@@ -4,13 +4,17 @@ import 'package:inventario_app/core/design_system/design_system.dart';
 import 'package:inventario_app/shared/widgets/barcode_scanner_button.dart';
 
 void main() {
-  testWidgets('dos resultados seguidos cierran solo el diálogo', (tester) async {
+  testWidgets('dos resultados seguidos cierran solo el diálogo', (
+    tester,
+  ) async {
     final results = <String>[];
-    await tester.pumpWidget(MaterialApp(
-      home: Scaffold(
-        body: Center(child: BarcodeScannerButton(onResult: results.add)),
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: Center(child: BarcodeScannerButton(onResult: results.add)),
+        ),
       ),
-    ));
+    );
 
     await tester.tap(find.byType(BarcodeScannerButton));
     await tester.pumpAndSettle();

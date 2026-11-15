@@ -3,8 +3,7 @@ import 'package:inventario_app/core/utils/app_logger.dart';
 import 'package:inventario_app/features/stores/domain/entities/store_entity.dart';
 import 'package:inventario_app/shared/providers/database_provider.dart';
 
-final storesProvider =
-    AsyncNotifierProvider<StoresNotifier, List<StoreEntity>>(
+final storesProvider = AsyncNotifierProvider<StoresNotifier, List<StoreEntity>>(
   StoresNotifier.new,
 );
 

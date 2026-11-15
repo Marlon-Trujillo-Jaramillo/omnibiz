@@ -13,7 +13,8 @@ import 'package:inventario_app/features/stores/domain/repositories/store_reposit
 // ── Sembast instance (injected from main.dart) ────────────────────────────────
 final databaseProvider = Provider<Database>((ref) {
   throw UnimplementedError(
-      'Provide Database via ProviderScope overrides in main.dart');
+    'Provide Database via ProviderScope overrides in main.dart',
+  );
 });
 
 // ── Repository providers ───────────────────────────────────────────────────────

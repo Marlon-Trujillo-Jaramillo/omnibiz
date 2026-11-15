@@ -1,7 +1,8 @@
 /// Métodos de pago soportados. Se persisten como texto en la venta.
 abstract final class PaymentMethods {
-  static const cash   = 'Efectivo';
-  static const card   = 'Tarjeta';
+  static const cash = 'Efectivo';
+  static const card = 'Tarjeta';
+
   /// Venta a crédito: exige cliente y suma el total a su deuda.
   static const credit = 'Fiado';
 
@@ -20,6 +21,7 @@ class CartItemEntity {
   final int productId;
   final String productName;
   final int quantity;
+
   /// Centavos (ver `Money`).
   final int unitPrice;
   final List<String> selectedVariants;
@@ -29,10 +31,10 @@ class CartItemEntity {
 
   CartItemEntity copyWith({int? quantity}) {
     return CartItemEntity(
-      productId:        productId,
-      productName:      productName,
-      quantity:         quantity ?? this.quantity,
-      unitPrice:        unitPrice,
+      productId: productId,
+      productName: productName,
+      quantity: quantity ?? this.quantity,
+      unitPrice: unitPrice,
       selectedVariants: selectedVariants,
     );
   }
@@ -55,6 +57,7 @@ class SaleEntity {
 
   final int id;
   final List<SaleItemEntity> items;
+
   /// Montos en centavos (ver `Money`), en la moneda [currencyCode].
   final int totalAmount;
   final int taxAmount;
@@ -63,6 +66,7 @@ class SaleEntity {
   final String businessContext;
   final DateTime createdAt;
   final int storeId;
+
   /// Código ISO de la moneda con la que se registró la venta (`AppCurrency.code`).
   /// Cambiar la moneda en ajustes no reetiqueta ventas ya hechas.
   final String currencyCode;
@@ -76,17 +80,17 @@ class SaleEntity {
     int? totalAmount,
   }) {
     return SaleEntity(
-      id:              id          ?? this.id,
-      items:           items       ?? this.items,
-      totalAmount:     totalAmount ?? this.totalAmount,
-      taxAmount:       taxAmount,
-      discountAmount:  discountAmount,
-      paymentMethod:   paymentMethod,
+      id: id ?? this.id,
+      items: items ?? this.items,
+      totalAmount: totalAmount ?? this.totalAmount,
+      taxAmount: taxAmount,
+      discountAmount: discountAmount,
+      paymentMethod: paymentMethod,
       businessContext: businessContext,
-      createdAt:       createdAt,
-      storeId:         storeId,
-      currencyCode:    currencyCode,
-      customerId:      customerId,
+      createdAt: createdAt,
+      storeId: storeId,
+      currencyCode: currencyCode,
+      customerId: customerId,
     );
   }
 }
@@ -104,8 +108,10 @@ class SaleItemEntity {
   final int productId;
   final String productName;
   final int quantity;
+
   /// Centavos.
   final int unitPrice;
+
   /// Centavos.
   final int totalPrice;
   final List<String> selectedVariants;

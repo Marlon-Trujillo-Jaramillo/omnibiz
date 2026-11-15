@@ -12,6 +12,7 @@ class CustomerEntity {
 
   final int id;
   final String name;
+
   /// Centavos (ver `Money`).
   final int totalDebt;
   final DateTime createdAt;
@@ -30,17 +31,23 @@ class CustomerEntity {
   }
 
   CustomerEntity copyWith({
-    int? id, String? name, int? totalDebt, DateTime? createdAt,
-    int? storeId, String? phone, String? email, DateTime? lastTransaction,
+    int? id,
+    String? name,
+    int? totalDebt,
+    DateTime? createdAt,
+    int? storeId,
+    String? phone,
+    String? email,
+    DateTime? lastTransaction,
   }) {
     return CustomerEntity(
-      id:              id              ?? this.id,
-      name:            name            ?? this.name,
-      totalDebt:       totalDebt       ?? this.totalDebt,
-      createdAt:       createdAt       ?? this.createdAt,
-      storeId:         storeId         ?? this.storeId,
-      phone:           phone           ?? this.phone,
-      email:           email           ?? this.email,
+      id: id ?? this.id,
+      name: name ?? this.name,
+      totalDebt: totalDebt ?? this.totalDebt,
+      createdAt: createdAt ?? this.createdAt,
+      storeId: storeId ?? this.storeId,
+      phone: phone ?? this.phone,
+      email: email ?? this.email,
       lastTransaction: lastTransaction ?? this.lastTransaction,
     );
   }

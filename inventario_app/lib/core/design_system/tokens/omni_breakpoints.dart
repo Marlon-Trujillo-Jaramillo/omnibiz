@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 
 abstract final class OmniBreakpoints {
-  static const double tablet  = 600;
+  static const double tablet = 600;
   static const double desktop = 900;
 }
 
 extension ResponsiveContext on BuildContext {
   double get screenWidth => MediaQuery.sizeOf(this).width;
-  bool get isTablet  => screenWidth >= OmniBreakpoints.tablet;
+  bool get isTablet => screenWidth >= OmniBreakpoints.tablet;
   bool get isDesktop => screenWidth >= OmniBreakpoints.desktop;
 }
 

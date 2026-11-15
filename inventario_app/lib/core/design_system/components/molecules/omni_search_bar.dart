@@ -81,9 +81,11 @@ class _OmniSearchBarState extends State<OmniSearchBar> {
         children: [
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: OmniSpacing.md),
-            child: Icon(LucideIcons.search,
-                color: focused ? c.primaryText : c.textMuted,
-                size: OmniSizes.iconSm + 2),
+            child: Icon(
+              LucideIcons.search,
+              color: focused ? c.primaryText : c.textMuted,
+              size: OmniSizes.iconSm + 2,
+            ),
           ),
           Expanded(
             child: TextField(
@@ -109,8 +111,11 @@ class _OmniSearchBarState extends State<OmniSearchBar> {
             IconButton(
               tooltip: 'Limpiar búsqueda',
               visualDensity: VisualDensity.compact,
-              icon: Icon(LucideIcons.x,
-                  size: OmniSizes.iconSm, color: c.textMuted),
+              icon: Icon(
+                LucideIcons.x,
+                size: OmniSizes.iconSm,
+                color: c.textMuted,
+              ),
               onPressed: _clear,
             ),
           if (widget.trailing != null) ...[

@@ -28,7 +28,10 @@ class DatabaseErrorApp extends StatelessWidget {
       darkTheme: OmniTheme.dark(),
       themeMode: themeMode,
       home: _DatabaseErrorScreen(
-          reason: reason, onRetry: onRetry, onReset: onReset),
+        reason: reason,
+        onRetry: onRetry,
+        onReset: onReset,
+      ),
     );
   }
 }
@@ -61,7 +64,8 @@ class _DatabaseErrorScreenState extends State<_DatabaseErrorScreen> {
     final ok = await OmniConfirmDialog.show(
       context,
       title: 'Empezar de cero',
-      body: 'Se creará una base de datos vacía. Los datos actuales no se '
+      body:
+          'Se creará una base de datos vacía. Los datos actuales no se '
           'pueden leer sin su clave; el archivo se conserva aparte en el '
           'dispositivo pero la app no lo usará.',
       confirmLabel: 'Empezar de cero',
@@ -89,14 +93,19 @@ class _DatabaseErrorScreenState extends State<_DatabaseErrorScreen> {
                   ),
                 ),
                 const SizedBox(height: OmniSpacing.xl),
-                Text('No se pueden abrir los datos',
-                    style: context.text.headingLg,
-                    textAlign: TextAlign.center),
+                Text(
+                  'No se pueden abrir los datos',
+                  style: context.text.headingLg,
+                  textAlign: TextAlign.center,
+                ),
                 const SizedBox(height: OmniSpacing.md),
-                Text(widget.reason,
-                    style: context.text.bodyMd
-                        .copyWith(color: context.colors.textSecondary),
-                    textAlign: TextAlign.center),
+                Text(
+                  widget.reason,
+                  style: context.text.bodyMd.copyWith(
+                    color: context.colors.textSecondary,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
                 const SizedBox(height: OmniSpacing.xxl),
                 OmniButton(
                   label: 'Reintentar',

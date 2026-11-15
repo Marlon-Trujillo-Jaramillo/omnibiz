@@ -24,13 +24,13 @@ class AddProductScreen extends ConsumerStatefulWidget {
 }
 
 class _AddProductScreenState extends ConsumerState<AddProductScreen> {
-  final _formKey      = GlobalKey<FormState>();
-  final _nameCtrl     = TextEditingController();
-  final _priceCtrl    = TextEditingController();
-  final _costCtrl     = TextEditingController();
-  final _stockCtrl    = TextEditingController();
-  final _barcodeCtrl  = TextEditingController();
-  final _variantCtrl  = TextEditingController();
+  final _formKey = GlobalKey<FormState>();
+  final _nameCtrl = TextEditingController();
+  final _priceCtrl = TextEditingController();
+  final _costCtrl = TextEditingController();
+  final _stockCtrl = TextEditingController();
+  final _barcodeCtrl = TextEditingController();
+  final _variantCtrl = TextEditingController();
   final List<String> _variants = [];
   String _category = 'General';
   bool _loading = false;
@@ -42,20 +42,24 @@ class _AddProductScreenState extends ConsumerState<AddProductScreen> {
     super.initState();
     final p = widget.product;
     if (p != null) {
-      _nameCtrl.text    = p.name;
-      _priceCtrl.text   = Money.toInput(p.price);
-      _costCtrl.text    = Money.toInput(p.costPrice);
-      _stockCtrl.text   = p.stock.toString();
+      _nameCtrl.text = p.name;
+      _priceCtrl.text = Money.toInput(p.price);
+      _costCtrl.text = Money.toInput(p.costPrice);
+      _stockCtrl.text = p.stock.toString();
       _barcodeCtrl.text = p.barcode ?? '';
-      _category         = p.category;
+      _category = p.category;
       _variants.addAll(p.variants);
     }
   }
 
   @override
   void dispose() {
-    _nameCtrl.dispose(); _priceCtrl.dispose(); _costCtrl.dispose();
-    _stockCtrl.dispose(); _barcodeCtrl.dispose(); _variantCtrl.dispose();
+    _nameCtrl.dispose();
+    _priceCtrl.dispose();
+    _costCtrl.dispose();
+    _stockCtrl.dispose();
+    _barcodeCtrl.dispose();
+    _variantCtrl.dispose();
     super.dispose();
   }
 
@@ -64,21 +68,23 @@ class _AddProductScreenState extends ConsumerState<AddProductScreen> {
     setState(() => _loading = true);
     try {
       final now = DateTime.now();
-      final p   = widget.product;
+      final p = widget.product;
 
       final product = ProductEntity(
-        id:        p?.id ?? 0,
-        name:      _nameCtrl.text.trim(),
-        category:  _category,
-        price:     Money.parse(_priceCtrl.text)!,
+        id: p?.id ?? 0,
+        name: _nameCtrl.text.trim(),
+        category: _category,
+        price: Money.parse(_priceCtrl.text)!,
         costPrice: Money.parse(_costCtrl.text)!,
-        stock:     int.parse(_stockCtrl.text.trim()),
-        sku:       p?.sku ?? '${AppConstants.skuPrefix}${now.millisecondsSinceEpoch}',
-        variants:  List.from(_variants),
-        barcode:   _barcodeCtrl.text.trim().isEmpty ? null : _barcodeCtrl.text.trim(),
+        stock: int.parse(_stockCtrl.text.trim()),
+        sku: p?.sku ?? '${AppConstants.skuPrefix}${now.millisecondsSinceEpoch}',
+        variants: List.from(_variants),
+        barcode: _barcodeCtrl.text.trim().isEmpty
+            ? null
+            : _barcodeCtrl.text.trim(),
         createdAt: p?.createdAt ?? now,
         updatedAt: now,
-        storeId:   storeId,
+        storeId: storeId,
       );
 
       if (_isEdit) {
@@ -102,18 +108,21 @@ class _AddProductScreenState extends ConsumerState<AddProductScreen> {
   void _addVariant() {
     final v = _variantCtrl.text.trim();
     if (v.isEmpty || _variants.contains(v)) return;
-    setState(() { _variants.add(v); _variantCtrl.clear(); });
+    setState(() {
+      _variants.add(v);
+      _variantCtrl.clear();
+    });
   }
 
   @override
   Widget build(BuildContext context) {
     final categoriesAsync = ref.watch(categoriesProvider);
-    final raw        = categoriesAsync.valueOrNull?.map((c) => c.name).toList() ?? [];
+    final raw = categoriesAsync.valueOrNull?.map((c) => c.name).toList() ?? [];
     final categories = raw.isEmpty ? ['General'] : raw;
     if (!categories.contains(_category)) _category = categories.first;
     // Sin sucursal cargada no se puede guardar (nunca storeId 0).
     final storeId = widget.product?.storeId ?? ref.watch(currentStoreProvider);
-    final onSave  = _loading || storeId == null ? null : () => _save(storeId);
+    final onSave = _loading || storeId == null ? null : () => _save(storeId);
 
     return Scaffold(
       appBar: AppBar(
@@ -146,8 +155,12 @@ class _AddProductScreenState extends ConsumerState<AddProductScreen> {
               builder: (_, constraints) {
                 final wide = constraints.maxWidth >= OmniBreakpoints.tablet;
                 return ListView(
-                  padding: const EdgeInsets.fromLTRB(OmniSpacing.base,
-                      OmniSpacing.sm, OmniSpacing.base, OmniSpacing.xxl),
+                  padding: const EdgeInsets.fromLTRB(
+                    OmniSpacing.base,
+                    OmniSpacing.sm,
+                    OmniSpacing.base,
+                    OmniSpacing.xxl,
+                  ),
                   children: [
                     _Section(
                       title: 'Información básica',
@@ -156,7 +169,8 @@ class _AddProductScreenState extends ConsumerState<AddProductScreen> {
                         OmniTextField(
                           controller: _nameCtrl,
                           label: 'Nombre del producto',
-                          validator: (v) => FormValidators.required(v, 'Nombre'),
+                          validator: (v) =>
+                              FormValidators.required(v, 'Nombre'),
                           textInputAction: TextInputAction.next,
                         ),
                         const SizedBox(height: OmniSpacing.md),
@@ -190,7 +204,10 @@ class _AddProductScreenState extends ConsumerState<AddProductScreen> {
                           _StockField(ctrl: _stockCtrl),
                         ],
                         const SizedBox(height: OmniSpacing.md),
-                        _MarginPreview(priceCtrl: _priceCtrl, costCtrl: _costCtrl),
+                        _MarginPreview(
+                          priceCtrl: _priceCtrl,
+                          costCtrl: _costCtrl,
+                        ),
                       ],
                     ),
                     _Section(
@@ -223,11 +240,13 @@ class _AddProductScreenState extends ConsumerState<AddProductScreen> {
                             spacing: OmniSpacing.sm,
                             runSpacing: OmniSpacing.sm,
                             children: _variants
-                                .map((v) => OmniInputChip(
-                                      label: v,
-                                      onDelete: () =>
-                                          setState(() => _variants.remove(v)),
-                                    ))
+                                .map(
+                                  (v) => OmniInputChip(
+                                    label: v,
+                                    onDelete: () =>
+                                        setState(() => _variants.remove(v)),
+                                  ),
+                                )
                                 .toList(),
                           ),
                         ],
@@ -274,7 +293,11 @@ class _Section extends StatelessWidget {
           children: [
             Row(
               children: [
-                Icon(icon, size: OmniSizes.iconSm, color: context.colors.primaryText),
+                Icon(
+                  icon,
+                  size: OmniSizes.iconSm,
+                  color: context.colors.primaryText,
+                ),
                 const SizedBox(width: OmniSpacing.sm),
                 Text(title, style: context.text.headingSm),
               ],
@@ -309,8 +332,8 @@ class _MarginPreview extends ConsumerWidget {
         final tone = profit < 0
             ? OmniTone.danger
             : margin < 15
-                ? OmniTone.warning
-                : OmniTone.success;
+            ? OmniTone.warning
+            : OmniTone.success;
         final c = context.colors;
         return Container(
           padding: const EdgeInsets.all(OmniSpacing.md),
@@ -320,11 +343,16 @@ class _MarginPreview extends ConsumerWidget {
           ),
           child: Row(
             children: [
-              Icon(LucideIcons.trendingUp,
-                  size: OmniSizes.iconSm, color: c.toneFg(tone)),
+              Icon(
+                LucideIcons.trendingUp,
+                size: OmniSizes.iconSm,
+                color: c.toneFg(tone),
+              ),
               const SizedBox(width: OmniSpacing.sm),
-              Text('Ganancia por unidad',
-                  style: context.text.bodySm.copyWith(color: c.toneFg(tone))),
+              Text(
+                'Ganancia por unidad',
+                style: context.text.bodySm.copyWith(color: c.toneFg(tone)),
+              ),
               const Spacer(),
               Text(
                 '${ref.formatMoney(profit)} · ${margin.toStringAsFixed(0)} %',
@@ -430,8 +458,11 @@ class _CategoryDropdown extends StatelessWidget {
       initialValue: value,
       style: context.text.bodyLg,
       borderRadius: OmniRadius.mdAll,
-      icon: Icon(LucideIcons.chevronDown,
-          size: OmniSizes.iconSm, color: context.colors.textMuted),
+      icon: Icon(
+        LucideIcons.chevronDown,
+        size: OmniSizes.iconSm,
+        color: context.colors.textMuted,
+      ),
       decoration: const InputDecoration(
         labelText: 'Categoría',
         prefixIcon: Icon(LucideIcons.tags, size: OmniSizes.iconSm + 2),

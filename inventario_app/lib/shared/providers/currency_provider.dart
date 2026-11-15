@@ -5,11 +5,12 @@ import 'package:inventario_app/core/utils/currency_formatter.dart';
 
 // ── Provider ───────────────────────────────────────────────────────────────────
 
-final currencyProvider =
-    NotifierProvider<CurrencyNotifier, AppCurrency>(CurrencyNotifier.new);
+final currencyProvider = NotifierProvider<CurrencyNotifier, AppCurrency>(
+  CurrencyNotifier.new,
+);
 
 class CurrencyNotifier extends Notifier<AppCurrency> {
-  static const _key     = 'app_currency';
+  static const _key = 'app_currency';
   static const _storage = FlutterSecureStorage();
 
   @override
@@ -34,9 +35,9 @@ class CurrencyNotifier extends Notifier<AppCurrency> {
   }
 
   static AppCurrency _parse(String? value) => AppCurrency.values.firstWhere(
-        (c) => c.name == value,
-        orElse: () => AppCurrency.cop,
-      );
+    (c) => c.name == value,
+    orElse: () => AppCurrency.cop,
+  );
 
   Future<void> setCurrency(AppCurrency currency) async {
     state = currency;

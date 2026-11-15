@@ -67,11 +67,12 @@ final salesPageSizeProvider = Provider<int>((_) => AppConstants.listPageSize);
 
 final salesHistoryProvider = AsyncNotifierProvider.autoDispose
     .family<SalesHistoryNotifier, SalesHistoryState, SalesHistoryQuery>(
-  SalesHistoryNotifier.new,
-);
+      SalesHistoryNotifier.new,
+    );
 
 class SalesHistoryNotifier
-    extends AutoDisposeFamilyAsyncNotifier<SalesHistoryState, SalesHistoryQuery> {
+    extends
+        AutoDisposeFamilyAsyncNotifier<SalesHistoryState, SalesHistoryQuery> {
   static const _tag = 'SalesHistory';
 
   @override
@@ -102,10 +103,12 @@ class SalesHistoryNotifier
     state = AsyncData(current.copyWith(isLoadingMore: true));
     try {
       final page = await _fetch(storeId, before: current.sales.last.createdAt);
-      state = AsyncData(SalesHistoryState(
-        sales:   [...current.sales, ...page],
-        hasMore: page.length == _pageSize,
-      ));
+      state = AsyncData(
+        SalesHistoryState(
+          sales: [...current.sales, ...page],
+          hasMore: page.length == _pageSize,
+        ),
+      );
     } catch (e, st) {
       AppLogger.e(_tag, 'loadMore() falló', e, st);
       state = AsyncData(current.copyWith(isLoadingMore: false));
@@ -113,11 +116,13 @@ class SalesHistoryNotifier
   }
 
   Future<List<SaleEntity>> _fetch(int storeId, {required DateTime? before}) {
-    return ref.read(saleRepositoryProvider).getPage(
-          storeId:       storeId,
-          limit:         _pageSize,
-          before:        before,
-          from:          arg.from,
+    return ref
+        .read(saleRepositoryProvider)
+        .getPage(
+          storeId: storeId,
+          limit: _pageSize,
+          before: before,
+          from: arg.from,
           paymentMethod: arg.paymentMethod,
         );
   }

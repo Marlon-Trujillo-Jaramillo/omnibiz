@@ -208,7 +208,9 @@ abstract final class OmniTheme {
       menuTheme: MenuThemeData(
         style: MenuStyle(
           backgroundColor: WidgetStatePropertyAll(p.bgPopup),
-          surfaceTintColor: const WidgetStatePropertyAll(OmniPalette.transparent),
+          surfaceTintColor: const WidgetStatePropertyAll(
+            OmniPalette.transparent,
+          ),
           shape: WidgetStatePropertyAll(
             RoundedRectangleBorder(
               borderRadius: OmniRadius.mdAll,
@@ -221,7 +223,9 @@ abstract final class OmniTheme {
         textStyle: text.bodyMedium,
         menuStyle: MenuStyle(
           backgroundColor: WidgetStatePropertyAll(p.bgPopup),
-          surfaceTintColor: const WidgetStatePropertyAll(OmniPalette.transparent),
+          surfaceTintColor: const WidgetStatePropertyAll(
+            OmniPalette.transparent,
+          ),
         ),
       ),
       tooltipTheme: TooltipThemeData(
@@ -405,8 +409,9 @@ abstract final class OmniTheme {
       ),
       checkboxTheme: CheckboxThemeData(
         fillColor: WidgetStateProperty.resolveWith(
-          (s) =>
-              s.contains(WidgetState.selected) ? p.primary : OmniPalette.transparent,
+          (s) => s.contains(WidgetState.selected)
+              ? p.primary
+              : OmniPalette.transparent,
         ),
         checkColor: WidgetStatePropertyAll(p.onPrimary),
         side: BorderSide(color: p.borderWeak, width: OmniSizes.focusRing),

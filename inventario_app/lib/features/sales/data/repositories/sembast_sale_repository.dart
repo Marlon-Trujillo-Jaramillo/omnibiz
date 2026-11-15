@@ -49,8 +49,10 @@ class SembastSaleRepository implements SaleRepository {
     DateTime? from,
     String? paymentMethod,
   }) async {
-    AppLogger.d(_tag,
-        'getPage(storeId=$storeId, limit=$limit, before=$before, from=$from, method=$paymentMethod)');
+    AppLogger.d(
+      _tag,
+      'getPage(storeId=$storeId, limit=$limit, before=$before, from=$from, method=$paymentMethod)',
+    );
     final finder = Finder(
       filter: Filter.and([
         Filter.equals('storeId', storeId),
@@ -71,8 +73,7 @@ class SembastSaleRepository implements SaleRepository {
 
   static List<SaleEntity> _toEntities(
     List<RecordSnapshot<int, Map<String, Object?>>> snapshots,
-  ) =>
-      snapshots.map((s) => Sale.fromMap(s.key, s.value).toEntity()).toList();
+  ) => snapshots.map((s) => Sale.fromMap(s.key, s.value).toEntity()).toList();
 
   @override
   Future<SaleEntity> commitSale(SaleEntity entity) async {

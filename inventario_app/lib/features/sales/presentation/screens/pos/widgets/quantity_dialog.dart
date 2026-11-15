@@ -36,8 +36,9 @@ class _QuantityDialog extends StatefulWidget {
 }
 
 class _QuantityDialogState extends State<_QuantityDialog> {
-  late final TextEditingController _controller =
-      TextEditingController(text: '${widget.initialValue}');
+  late final TextEditingController _controller = TextEditingController(
+    text: '${widget.initialValue}',
+  );
 
   void _submit() {
     final value = int.tryParse(_controller.text.trim());

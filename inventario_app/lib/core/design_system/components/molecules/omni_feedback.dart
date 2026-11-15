@@ -8,11 +8,11 @@ import '../../tokens/omni_spacing.dart';
 import '../atoms/omni_drag_handle.dart';
 
 IconData _toneIcon(OmniTone tone) => switch (tone) {
-      OmniTone.success => LucideIcons.checkCircle2,
-      OmniTone.warning => LucideIcons.alertTriangle,
-      OmniTone.danger  => LucideIcons.alertCircle,
-      OmniTone.info || OmniTone.brand || OmniTone.neutral => LucideIcons.info,
-    };
+  OmniTone.success => LucideIcons.checkCircle2,
+  OmniTone.warning => LucideIcons.alertTriangle,
+  OmniTone.danger => LucideIcons.alertCircle,
+  OmniTone.info || OmniTone.brand || OmniTone.neutral => LucideIcons.info,
+};
 
 // ── Snackbar ───────────────────────────────────────────────────────────────────
 
@@ -28,10 +28,12 @@ extension OmniSnackBar on ScaffoldMessengerState {
   }) {
     this
       ..hideCurrentSnackBar()
-      ..showSnackBar(SnackBar(
-        duration: duration,
-        content: _SnackContent(message: message, tone: tone, icon: icon),
-      ));
+      ..showSnackBar(
+        SnackBar(
+          duration: duration,
+          content: _SnackContent(message: message, tone: tone, icon: icon),
+        ),
+      );
   }
 }
 
@@ -45,7 +47,9 @@ class _SnackContent extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     const onDark = OmniPalette.dark;
-    final fg = tone == OmniTone.neutral ? onDark.textSecondary : onDark.toneFg(tone);
+    final fg = tone == OmniTone.neutral
+        ? onDark.textSecondary
+        : onDark.toneFg(tone);
     return Row(
       children: [
         Container(
@@ -55,12 +59,18 @@ class _SnackContent extends StatelessWidget {
             color: onDark.toneBg(tone),
             shape: BoxShape.circle,
           ),
-          child: Icon(icon ?? _toneIcon(tone), color: fg, size: OmniSizes.iconSm),
+          child: Icon(
+            icon ?? _toneIcon(tone),
+            color: fg,
+            size: OmniSizes.iconSm,
+          ),
         ),
         const SizedBox(width: OmniSpacing.md),
         Expanded(
-          child: Text(message,
-              style: context.text.bodyMd.copyWith(color: context.colors.onSnack)),
+          child: Text(
+            message,
+            style: context.text.bodyMd.copyWith(color: context.colors.onSnack),
+          ),
         ),
       ],
     );
@@ -102,7 +112,11 @@ class OmniBanner extends StatelessWidget {
         children: [
           Padding(
             padding: const EdgeInsets.only(top: OmniSpacing.xxs),
-            child: Icon(icon ?? _toneIcon(tone), color: fg, size: OmniSizes.iconSm),
+            child: Icon(
+              icon ?? _toneIcon(tone),
+              color: fg,
+              size: OmniSizes.iconSm,
+            ),
           ),
           const SizedBox(width: OmniSpacing.sm + 2),
           Expanded(
@@ -110,9 +124,13 @@ class OmniBanner extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 if (title != null) ...[
-                  Text(title!,
-                      style: context.text.bodyMd
-                          .copyWith(color: fg, fontWeight: FontWeight.w600)),
+                  Text(
+                    title!,
+                    style: context.text.bodyMd.copyWith(
+                      color: fg,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
                   const SizedBox(height: OmniSpacing.xxs),
                 ],
                 Text(message, style: context.text.bodySm.copyWith(color: fg)),

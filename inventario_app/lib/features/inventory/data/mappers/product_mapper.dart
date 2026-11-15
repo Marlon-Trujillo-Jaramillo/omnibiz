@@ -3,36 +3,36 @@ import 'package:inventario_app/features/inventory/domain/entities/product_entity
 
 extension ProductModelMapper on Product {
   ProductEntity toEntity() => ProductEntity(
-        id:        id,
-        name:      name,
-        category:  category,
-        price:     price,
-        costPrice: costPrice,
-        stock:     stock,
-        sku:       sku,
-        variants:  variants,
-        createdAt: createdAt,
-        updatedAt: updatedAt,
-        storeId:   storeId,
-        barcode:   barcode,
-      );
+    id: id,
+    name: name,
+    category: category,
+    price: price,
+    costPrice: costPrice,
+    stock: stock,
+    sku: sku,
+    variants: variants,
+    createdAt: createdAt,
+    updatedAt: updatedAt,
+    storeId: storeId,
+    barcode: barcode,
+  );
 }
 
 extension ProductEntityMapper on ProductEntity {
   Product toModel() => Product(
-        id:        id,
-        name:      name,
-        category:  category,
-        price:     price,
-        costPrice: costPrice,
-        stock:     stock,
-        sku:       sku,
-        variants:  variants,
-        createdAt: createdAt,
-        updatedAt: updatedAt,
-        storeId:   storeId,
-        barcode:   barcode,
-      );
+    id: id,
+    name: name,
+    category: category,
+    price: price,
+    costPrice: costPrice,
+    stock: stock,
+    sku: sku,
+    variants: variants,
+    createdAt: createdAt,
+    updatedAt: updatedAt,
+    storeId: storeId,
+    barcode: barcode,
+  );
 }
 
 extension CategoryModelMapper on Category {
