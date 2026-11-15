@@ -23,8 +23,11 @@ class SplashScreen extends StatelessWidget {
                 borderRadius: OmniRadius.xxlAll,
                 boxShadow: c.glow(c.primary),
               ),
-              child: Icon(LucideIcons.lock,
-                  color: c.onPrimary, size: OmniSizes.iconXl),
+              child: Icon(
+                LucideIcons.lock,
+                color: c.onPrimary,
+                size: OmniSizes.iconXl,
+              ),
             ),
             const SizedBox(height: OmniSpacing.xl),
             Text('OmniBiz', style: context.text.headingLg),

@@ -8,20 +8,19 @@ ProductEntity _product({
   int price = 5000,
   int costPrice = 3000,
   int stock = 10,
-}) =>
-    ProductEntity(
-      id:        id,
-      name:      name,
-      category:  'Bebidas',
-      price:     price,
-      costPrice: costPrice,
-      stock:     stock,
-      sku:       'SKU-001',
-      variants:  [],
-      createdAt: DateTime(2024),
-      updatedAt: DateTime(2024),
-      storeId:   0,
-    );
+}) => ProductEntity(
+  id: id,
+  name: name,
+  category: 'Bebidas',
+  price: price,
+  costPrice: costPrice,
+  stock: stock,
+  sku: 'SKU-001',
+  variants: [],
+  createdAt: DateTime(2024),
+  updatedAt: DateTime(2024),
+  storeId: 0,
+);
 
 void main() {
   group('ProductEntity.isLowStock', () {
@@ -55,7 +54,10 @@ void main() {
   group('ProductEntity.margin', () {
     test('margen correcto', () {
       // (5000 - 3000) / 5000 = 0.4
-      expect(_product(price: 5000, costPrice: 3000).margin, closeTo(0.4, 0.001));
+      expect(
+        _product(price: 5000, costPrice: 3000).margin,
+        closeTo(0.4, 0.001),
+      );
     });
 
     test('precio cero retorna 0', () {
@@ -75,7 +77,7 @@ void main() {
 
   group('ProductEntity.copyWith', () {
     test('modifica solo el campo indicado', () {
-      final base     = _product(name: 'Original', stock: 10);
+      final base = _product(name: 'Original', stock: 10);
       final modified = base.copyWith(stock: 99);
       expect(modified.stock, 99);
       expect(modified.name, 'Original');
@@ -84,7 +86,12 @@ void main() {
 
   group('CategoryEntity.copyWith', () {
     test('modifica campo', () {
-      const cat  = CategoryEntity(id: 1, name: 'Bebidas', icon: 'coffee', storeId: 0);
+      const cat = CategoryEntity(
+        id: 1,
+        name: 'Bebidas',
+        icon: 'coffee',
+        storeId: 0,
+      );
       final copy = cat.copyWith(name: 'Comida');
       expect(copy.name, 'Comida');
       expect(copy.icon, 'coffee');

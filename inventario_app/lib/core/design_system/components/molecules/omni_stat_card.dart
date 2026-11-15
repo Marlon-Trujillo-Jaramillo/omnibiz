@@ -20,6 +20,7 @@ class OmniStatCard extends StatelessWidget {
   final String title;
   final String value;
   final IconData icon;
+
   /// Color del ícono; por defecto, marca.
   final Color? color;
   final String? subtitle;

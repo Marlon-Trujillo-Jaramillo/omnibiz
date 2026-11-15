@@ -14,8 +14,10 @@ class ProcessSaleUseCase {
   static const _tag = 'ProcessSaleUC';
 
   Future<AppResult<SaleEntity>> execute(SaleEntity sale) async {
-    AppLogger.i(_tag,
-        'execute() total=${sale.totalAmount} method=${sale.paymentMethod} items=${sale.items.length}');
+    AppLogger.i(
+      _tag,
+      'execute() total=${sale.totalAmount} method=${sale.paymentMethod} items=${sale.items.length}',
+    );
 
     final invalid = _validate(sale);
     if (invalid != null) {
@@ -31,8 +33,8 @@ class ProcessSaleUseCase {
       AppLogger.w(_tag, '  ✗ venta rechazada: ${e.message}');
       return AppFailure(switch (e) {
         InsufficientStockRejection() => StockFailure(e.message),
-        ProductNotFoundRejection()   => NotFoundFailure(e.message),
-        InvalidSaleRejection()       => ValidationFailure(e.message),
+        ProductNotFoundRejection() => NotFoundFailure(e.message),
+        InvalidSaleRejection() => ValidationFailure(e.message),
       });
     } catch (e, st) {
       AppLogger.e(_tag, 'execute() → excepción inesperada', e, st);
@@ -48,9 +50,12 @@ class ProcessSaleUseCase {
       return const ValidationFailure('El carrito está vacío');
     }
     if (sale.items.any((i) => i.quantity <= 0 || i.unitPrice < 0)) {
-      return const ValidationFailure('Hay productos con cantidad o precio inválido');
+      return const ValidationFailure(
+        'Hay productos con cantidad o precio inválido',
+      );
     }
-    if (sale.paymentMethod == PaymentMethods.credit && sale.customerId == null) {
+    if (sale.paymentMethod == PaymentMethods.credit &&
+        sale.customerId == null) {
       return const ValidationFailure('Para vender fiado selecciona un cliente');
     }
     return null;
@@ -62,17 +67,17 @@ class ProcessSaleUseCase {
     final items = [
       for (final i in sale.items)
         SaleItemEntity(
-          productId:        i.productId,
-          productName:      i.productName,
-          quantity:         i.quantity,
-          unitPrice:        i.unitPrice,
-          totalPrice:       i.unitPrice * i.quantity,
+          productId: i.productId,
+          productName: i.productName,
+          quantity: i.quantity,
+          unitPrice: i.unitPrice,
+          totalPrice: i.unitPrice * i.quantity,
           selectedVariants: i.selectedVariants,
         ),
     ];
     final subtotal = items.fold(0, (sum, i) => sum + i.totalPrice);
     return sale.copyWith(
-      items:       items,
+      items: items,
       totalAmount: subtotal + sale.taxAmount - sale.discountAmount,
     );
   }

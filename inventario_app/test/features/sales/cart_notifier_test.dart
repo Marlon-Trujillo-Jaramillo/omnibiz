@@ -14,41 +14,44 @@ class _FakeCurrentStore extends CurrentStoreNotifier {
 }
 
 ProductEntity _product() => ProductEntity(
-      id:        7,
-      name:      'Café',
-      category:  'General',
-      price:     3000,
-      costPrice: 1000,
-      stock:     10,
-      sku:       'SKU-7',
-      variants:  const [],
-      createdAt: DateTime(2024),
-      updatedAt: DateTime(2024),
-      storeId:   1,
-    );
+  id: 7,
+  name: 'Café',
+  category: 'General',
+  price: 3000,
+  costPrice: 1000,
+  stock: 10,
+  sku: 'SKU-7',
+  variants: const [],
+  createdAt: DateTime(2024),
+  updatedAt: DateTime(2024),
+  storeId: 1,
+);
 
 void main() {
-  test('cambiar de sucursal vacía el carrito y el cliente seleccionado', () async {
-    final c = ProviderContainer(overrides: [
-      currentStoreProvider.overrideWith(_FakeCurrentStore.new),
-    ]);
-    addTearDown(c.dispose);
+  test(
+    'cambiar de sucursal vacía el carrito y el cliente seleccionado',
+    () async {
+      final c = ProviderContainer(
+        overrides: [currentStoreProvider.overrideWith(_FakeCurrentStore.new)],
+      );
+      addTearDown(c.dispose);
 
-    c.read(cartProvider.notifier)
-      ..addProduct(_product())
-      ..selectCustomer(3);
-    expect(c.read(cartProvider).items, hasLength(1));
+      c.read(cartProvider.notifier)
+        ..addProduct(_product())
+        ..selectCustomer(3);
+      expect(c.read(cartProvider).items, hasLength(1));
 
-    await c.read(currentStoreProvider.notifier).set(2);
+      await c.read(currentStoreProvider.notifier).set(2);
 
-    expect(c.read(cartProvider).items, isEmpty);
-    expect(c.read(cartProvider).selectedCustomerId, isNull);
-  });
+      expect(c.read(cartProvider).items, isEmpty);
+      expect(c.read(cartProvider).selectedCustomerId, isNull);
+    },
+  );
 
   test('re-seleccionar la misma sucursal conserva el carrito', () async {
-    final c = ProviderContainer(overrides: [
-      currentStoreProvider.overrideWith(_FakeCurrentStore.new),
-    ]);
+    final c = ProviderContainer(
+      overrides: [currentStoreProvider.overrideWith(_FakeCurrentStore.new)],
+    );
     addTearDown(c.dispose);
 
     c.read(cartProvider.notifier).addProduct(_product());

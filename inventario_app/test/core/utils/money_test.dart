@@ -13,7 +13,17 @@ void main() {
     });
 
     test('rechaza entradas inválidas', () {
-      for (final bad in [null, '', 'abc', '-5', '1.234', '1.000,50', '1e3', '.5', '5.']) {
+      for (final bad in [
+        null,
+        '',
+        'abc',
+        '-5',
+        '1.234',
+        '1.000,50',
+        '1e3',
+        '.5',
+        '5.',
+      ]) {
         expect(Money.parse(bad), isNull, reason: '"$bad"');
       }
     });

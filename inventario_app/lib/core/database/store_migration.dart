@@ -37,7 +37,10 @@ Future<int> ensureStoresMigrated(Database db) async {
         await store.record(s.key).update(txn, {'storeId': defaultStoreId});
       }
     });
-    AppLogger.i(_tag, 'Backfill: ${snapshots.length} registros en "$storeName" → storeId=$defaultStoreId');
+    AppLogger.i(
+      _tag,
+      'Backfill: ${snapshots.length} registros en "$storeName" → storeId=$defaultStoreId',
+    );
   }
 
   return defaultStoreId;

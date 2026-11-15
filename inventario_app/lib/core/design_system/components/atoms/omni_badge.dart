@@ -17,6 +17,7 @@ class OmniBadge extends StatelessWidget {
 
   final int count;
   final Widget child;
+
   /// Relleno del contador; por defecto, `primary`.
   final Color? color;
 

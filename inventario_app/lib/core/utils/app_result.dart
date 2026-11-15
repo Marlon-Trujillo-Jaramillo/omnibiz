@@ -31,21 +31,20 @@ extension AppResultX<T> on AppResult<T> {
   bool get isFailure => this is AppFailure<T>;
 
   T? get dataOrNull => switch (this) {
-        AppSuccess(:final data) => data,
-        AppFailure()            => null,
-      };
+    AppSuccess(:final data) => data,
+    AppFailure() => null,
+  };
 
   Failure? get failureOrNull => switch (this) {
-        AppSuccess()             => null,
-        AppFailure(:final failure) => failure,
-      };
+    AppSuccess() => null,
+    AppFailure(:final failure) => failure,
+  };
 
   R when<R>({
     required R Function(T data) onSuccess,
     required R Function(Failure failure) onFailure,
-  }) =>
-      switch (this) {
-        AppSuccess(:final data)    => onSuccess(data),
-        AppFailure(:final failure) => onFailure(failure),
-      };
+  }) => switch (this) {
+    AppSuccess(:final data) => onSuccess(data),
+    AppFailure(:final failure) => onFailure(failure),
+  };
 }

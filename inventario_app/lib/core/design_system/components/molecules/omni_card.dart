@@ -28,6 +28,7 @@ class OmniCard extends StatelessWidget {
   final Color? color;
   final Color? borderColor;
   final BorderRadius? radius;
+
   /// Resalta con tinte y borde de marca.
   final bool selected;
 

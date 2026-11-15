@@ -27,8 +27,11 @@ class OmniAvatar extends StatelessWidget {
   ];
 
   String get _initials {
-    final parts =
-        name.trim().split(RegExp(r'\s+')).where((p) => p.isNotEmpty).toList();
+    final parts = name
+        .trim()
+        .split(RegExp(r'\s+'))
+        .where((p) => p.isNotEmpty)
+        .toList();
     if (parts.isEmpty) return '?';
     if (parts.length == 1) return parts.first[0].toUpperCase();
     return (parts.first[0] + parts.last[0]).toUpperCase();
@@ -67,6 +70,7 @@ class OmniIconAvatar extends StatelessWidget {
 
   final IconData icon;
   final double size;
+
   /// Color del ícono; por defecto, marca. El fondo es un tinte del mismo
   /// color salvo que se indique [background].
   final Color? color;

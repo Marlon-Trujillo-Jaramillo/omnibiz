@@ -17,6 +17,7 @@ class AuthState {
   final AuthStatus status;
   final bool hasBiometrics;
   final String? error;
+
   /// Fin del bloqueo por demasiados intentos fallidos de PIN.
   final DateTime? lockedUntil;
 
@@ -31,10 +32,10 @@ class AuthState {
     DateTime? lockedUntil,
   }) {
     return AuthState(
-      status:        status        ?? this.status,
+      status: status ?? this.status,
       hasBiometrics: hasBiometrics ?? this.hasBiometrics,
-      error:         error,
-      lockedUntil:   lockedUntil,
+      error: error,
+      lockedUntil: lockedUntil,
     );
   }
 }
@@ -46,7 +47,9 @@ final authRepositoryProvider = Provider<AuthRepository>((ref) {
 /// Reloj inyectable (tests de bloqueo).
 final authClockProvider = Provider<DateTime Function()>((_) => DateTime.now);
 
-final authProvider = NotifierProvider<AuthNotifier, AuthState>(AuthNotifier.new);
+final authProvider = NotifierProvider<AuthNotifier, AuthState>(
+  AuthNotifier.new,
+);
 
 /// Duración del bloqueo tras [failedAttempts] fallos: nada hasta
 /// [AppConstants.maxPinAttempts]; luego base × 2^(extra), con tope.
@@ -75,15 +78,18 @@ class AuthNotifier extends Notifier<AuthState> {
   Future<void> _init() async {
     AppLogger.i(_tag, '_init(): verificando PIN y biometría...');
     try {
-      final hasPin  = await _repo.hasPin();
-      final canBio  = await _repo.canUseBiometrics();
+      final hasPin = await _repo.hasPin();
+      final canBio = await _repo.canUseBiometrics();
       final lockout = await _repo.readLockout();
-      final status  = hasPin ? AuthStatus.locked : AuthStatus.noPinSet;
-      AppLogger.i(_tag, '_init(): hasPin=$hasPin canBio=$canBio → status=$status');
+      final status = hasPin ? AuthStatus.locked : AuthStatus.noPinSet;
+      AppLogger.i(
+        _tag,
+        '_init(): hasPin=$hasPin canBio=$canBio → status=$status',
+      );
       state = AuthState(
-        status:        status,
+        status: status,
         hasBiometrics: canBio,
-        lockedUntil:   lockout.isLockedAt(_now()) ? lockout.lockedUntil : null,
+        lockedUntil: lockout.isLockedAt(_now()) ? lockout.lockedUntil : null,
       );
     } catch (e, st) {
       AppLogger.e(_tag, '_init() falló → bloqueado por seguridad', e, st);
@@ -104,9 +110,14 @@ class AuthNotifier extends Notifier<AuthState> {
     try {
       final lockout = await _repo.readLockout();
       if (lockout.isLockedAt(_now())) {
-        AppLogger.w(_tag, 'unlockWithPin() → bloqueado hasta ${lockout.lockedUntil}');
+        AppLogger.w(
+          _tag,
+          'unlockWithPin() → bloqueado hasta ${lockout.lockedUntil}',
+        );
         state = state.copyWith(
-            error: 'Demasiados intentos', lockedUntil: lockout.lockedUntil);
+          error: 'Demasiados intentos',
+          lockedUntil: lockout.lockedUntil,
+        );
         return false;
       }
 
@@ -118,11 +129,15 @@ class AuthNotifier extends Notifier<AuthState> {
       }
 
       final attempts = lockout.failedAttempts + 1;
-      final wait     = pinLockoutFor(attempts);
-      final until    = wait == Duration.zero ? null : _now().add(wait);
+      final wait = pinLockoutFor(attempts);
+      final until = wait == Duration.zero ? null : _now().add(wait);
       await _repo.writeLockout(
-          PinLockout(failedAttempts: attempts, lockedUntil: until));
-      AppLogger.w(_tag, 'unlockWithPin() → PIN incorrecto ✗ (intento $attempts)');
+        PinLockout(failedAttempts: attempts, lockedUntil: until),
+      );
+      AppLogger.w(
+        _tag,
+        'unlockWithPin() → PIN incorrecto ✗ (intento $attempts)',
+      );
       state = state.copyWith(error: 'PIN incorrecto', lockedUntil: until);
       return false;
     } catch (e, st) {
@@ -141,7 +156,12 @@ class AuthNotifier extends Notifier<AuthState> {
       try {
         await _repo.writeLockout(PinLockout.none);
       } catch (e, st) {
-        AppLogger.e(_tag, 'unlockWithBiometrics(): no se pudo limpiar bloqueo', e, st);
+        AppLogger.e(
+          _tag,
+          'unlockWithBiometrics(): no se pudo limpiar bloqueo',
+          e,
+          st,
+        );
       }
       state = state.copyWith(status: AuthStatus.authenticated);
     } else {
@@ -154,7 +174,10 @@ class AuthNotifier extends Notifier<AuthState> {
     // Solo una sesión abierta se bloquea (sin PIN no habría cómo desbloquear).
     if (state.status != AuthStatus.authenticated) return;
     AppLogger.i(_tag, 'lock()');
-    state = state.copyWith(status: AuthStatus.locked, lockedUntil: state.lockedUntil);
+    state = state.copyWith(
+      status: AuthStatus.locked,
+      lockedUntil: state.lockedUntil,
+    );
   }
 
   Future<void> resetPin() async {

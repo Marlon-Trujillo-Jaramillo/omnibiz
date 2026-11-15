@@ -24,6 +24,7 @@ class OmniDialog extends StatelessWidget {
   final IconData? icon;
   final OmniTone tone;
   final Widget child;
+
   /// Fila de acciones al pie (ver [OmniDialogActions]).
   final Widget? actions;
 
@@ -47,16 +48,21 @@ class OmniDialog extends StatelessWidget {
                     color: c.toneBg(tone),
                     borderRadius: OmniRadius.mdAll,
                   ),
-                  child: Icon(icon,
-                      color: c.toneFg(tone), size: OmniSizes.iconMd + 2),
+                  child: Icon(
+                    icon,
+                    color: c.toneFg(tone),
+                    size: OmniSizes.iconMd + 2,
+                  ),
                 ),
                 const SizedBox(height: OmniSpacing.base),
               ],
               Text(title, style: context.text.headingLg),
               if (subtitle != null) ...[
                 const SizedBox(height: OmniSpacing.xs + 2),
-                Text(subtitle!, style: context.text.bodyMd.copyWith(
-                    color: c.textSecondary)),
+                Text(
+                  subtitle!,
+                  style: context.text.bodyMd.copyWith(color: c.textSecondary),
+                ),
               ],
               const SizedBox(height: OmniSpacing.xl),
               child,
@@ -85,10 +91,12 @@ class OmniDialogActions extends StatelessWidget {
   });
 
   final VoidCallback onCancel;
+
   /// null → botón deshabilitado.
   final VoidCallback? onConfirm;
   final String confirmLabel;
   final String cancelLabel;
+
   /// Deshabilita ambos botones mientras se guarda (evita doble envío).
   final bool loading;
   final bool destructive;
@@ -179,7 +187,9 @@ class OmniConfirmDialog extends StatelessWidget {
       ),
       child: Text(
         body,
-        style: context.text.bodyMd.copyWith(color: context.colors.textSecondary),
+        style: context.text.bodyMd.copyWith(
+          color: context.colors.textSecondary,
+        ),
       ),
     );
   }

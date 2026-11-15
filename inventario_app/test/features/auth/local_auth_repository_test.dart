@@ -17,7 +17,7 @@ void main() {
   setUp(() {
     FlutterSecureStorage.setMockInitialValues({});
     storage = const FlutterSecureStorage();
-    repo    = LocalAuthRepository(storage: storage, iterations: 1000);
+    repo = LocalAuthRepository(storage: storage, iterations: 1000);
   });
 
   test('setPin guarda PBKDF2 con sal, nunca el SHA-256 plano', () async {

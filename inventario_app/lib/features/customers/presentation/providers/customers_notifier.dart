@@ -6,8 +6,8 @@ import 'package:inventario_app/shared/providers/database_provider.dart';
 
 final customersProvider =
     AsyncNotifierProvider<CustomersNotifier, List<CustomerEntity>>(
-  CustomersNotifier.new,
-);
+      CustomersNotifier.new,
+    );
 
 class CustomersNotifier extends AsyncNotifier<List<CustomerEntity>> {
   static const _tag = 'CustomersNotifier';
@@ -29,7 +29,9 @@ class CustomersNotifier extends AsyncNotifier<List<CustomerEntity>> {
 
   Future<void> registerPayment(int customerId, int amount) async {
     AppLogger.i(_tag, 'registerPayment(id=$customerId, amount=$amount)');
-    await ref.read(customerRepositoryProvider).registerPayment(customerId, amount);
+    await ref
+        .read(customerRepositoryProvider)
+        .registerPayment(customerId, amount);
     ref.invalidateSelf();
     AppLogger.i(_tag, 'registerPayment() → ok');
   }

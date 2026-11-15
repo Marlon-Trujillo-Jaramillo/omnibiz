@@ -49,6 +49,7 @@ class OmniTextField extends StatelessWidget {
   final FocusNode? focusNode;
   final TextInputAction? textInputAction;
   final String? initialValue;
+
   /// Cifras tabulares (montos, cantidades, códigos).
   final bool tabularDigits;
   final String? helperText;

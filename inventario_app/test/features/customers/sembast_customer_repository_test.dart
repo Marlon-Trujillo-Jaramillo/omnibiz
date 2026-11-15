@@ -7,17 +7,13 @@ import 'package:inventario_app/features/customers/domain/repositories/customer_r
 int _dbCounter = 0;
 String _dbName() => 'customers_${_dbCounter++}.db';
 
-CustomerEntity _entity({
-  int id = 0,
-  String name = 'Ana',
-  int totalDebt = 0,
-}) =>
+CustomerEntity _entity({int id = 0, String name = 'Ana', int totalDebt = 0}) =>
     CustomerEntity(
-      id:        id,
-      name:      name,
+      id: id,
+      name: name,
       totalDebt: totalDebt,
       createdAt: DateTime(2024),
-      storeId:   0,
+      storeId: 0,
     );
 
 void main() {
@@ -27,8 +23,8 @@ void main() {
 
   setUp(() async {
     dbName = _dbName();
-    db     = await databaseFactoryMemory.openDatabase(dbName);
-    repo   = SembastCustomerRepository(db);
+    db = await databaseFactoryMemory.openDatabase(dbName);
+    repo = SembastCustomerRepository(db);
   });
 
   tearDown(() async {
@@ -92,21 +88,30 @@ void main() {
       expect((await repo.getById(id))?.totalDebt, 6000);
     });
 
-    test('monto mayor que la deuda → InvalidPaymentException sin cambios', () async {
-      final id = await withDebt(10000);
+    test(
+      'monto mayor que la deuda → InvalidPaymentException sin cambios',
+      () async {
+        final id = await withDebt(10000);
 
-      await expectLater(
-        repo.registerPayment(id, 10001),
-        throwsA(isA<InvalidPaymentException>()),
-      );
-      expect((await repo.getById(id))?.totalDebt, 10000);
-    });
+        await expectLater(
+          repo.registerPayment(id, 10001),
+          throwsA(isA<InvalidPaymentException>()),
+        );
+        expect((await repo.getById(id))?.totalDebt, 10000);
+      },
+    );
 
     test('monto <= 0 → InvalidPaymentException', () async {
       final id = await withDebt(10000);
 
-      await expectLater(repo.registerPayment(id, 0), throwsA(isA<InvalidPaymentException>()));
-      await expectLater(repo.registerPayment(id, -5), throwsA(isA<InvalidPaymentException>()));
+      await expectLater(
+        repo.registerPayment(id, 0),
+        throwsA(isA<InvalidPaymentException>()),
+      );
+      await expectLater(
+        repo.registerPayment(id, -5),
+        throwsA(isA<InvalidPaymentException>()),
+      );
       expect((await repo.getById(id))?.totalDebt, 10000);
     });
 

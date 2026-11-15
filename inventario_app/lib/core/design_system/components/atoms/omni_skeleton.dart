@@ -29,17 +29,17 @@ class OmniSkeleton extends StatelessWidget {
         : BorderRadius.circular(radius ?? OmniRadius.sm);
 
     Widget block(double v) => Container(
-          width: width,
-          height: height,
-          decoration: BoxDecoration(
-            borderRadius: borderRadius,
-            gradient: LinearGradient(
-              begin: Alignment(v - 1, 0),
-              end: Alignment(v + 1, 0),
-              colors: [c.bgRaised, c.borderMuted, c.bgRaised],
-            ),
-          ),
-        );
+      width: width,
+      height: height,
+      decoration: BoxDecoration(
+        borderRadius: borderRadius,
+        gradient: LinearGradient(
+          begin: Alignment(v - 1, 0),
+          end: Alignment(v + 1, 0),
+          colors: [c.bgRaised, c.borderMuted, c.bgRaised],
+        ),
+      ),
+    );
 
     if (t == null) return _StandaloneShimmer(builder: block);
     return AnimatedBuilder(animation: t, builder: (_, __) => block(t.value));
@@ -57,10 +57,14 @@ class OmniShimmer extends StatefulWidget {
 
 class _OmniShimmerState extends State<OmniShimmer>
     with SingleTickerProviderStateMixin {
-  late final AnimationController _ctrl =
-      AnimationController(vsync: this, duration: OmniMotion.shimmer)..repeat();
-  late final Animation<double> _anim = Tween<double>(begin: -2, end: 2)
-      .animate(CurvedAnimation(parent: _ctrl, curve: Curves.easeInOutSine));
+  late final AnimationController _ctrl = AnimationController(
+    vsync: this,
+    duration: OmniMotion.shimmer,
+  )..repeat();
+  late final Animation<double> _anim = Tween<double>(
+    begin: -2,
+    end: 2,
+  ).animate(CurvedAnimation(parent: _ctrl, curve: Curves.easeInOutSine));
 
   @override
   void dispose() {
@@ -77,9 +81,8 @@ class _ShimmerScope extends InheritedWidget {
   const _ShimmerScope({required this.animation, required super.child});
   final Animation<double> animation;
 
-  static Animation<double>? maybeOf(BuildContext context) => context
-      .dependOnInheritedWidgetOfExactType<_ShimmerScope>()
-      ?.animation;
+  static Animation<double>? maybeOf(BuildContext context) =>
+      context.dependOnInheritedWidgetOfExactType<_ShimmerScope>()?.animation;
 
   @override
   bool updateShouldNotify(_ShimmerScope old) => old.animation != animation;
@@ -91,14 +94,16 @@ class _StandaloneShimmer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => OmniShimmer(
-        child: Builder(
-          builder: (ctx) {
-            final t = _ShimmerScope.maybeOf(ctx)!;
-            return AnimatedBuilder(
-                animation: t, builder: (_, __) => builder(t.value));
-          },
-        ),
-      );
+    child: Builder(
+      builder: (ctx) {
+        final t = _ShimmerScope.maybeOf(ctx)!;
+        return AnimatedBuilder(
+          animation: t,
+          builder: (_, __) => builder(t.value),
+        );
+      },
+    ),
+  );
 }
 
 // ── Composites ────────────────────────────────────────────────────────────────
@@ -124,19 +129,24 @@ class OmniSkeletonTile extends StatelessWidget {
       child: const Row(
         children: [
           OmniSkeleton(
-              width: OmniSizes.avatarSm + 4,
-              height: OmniSizes.avatarSm + 4,
-              radius: OmniRadius.md),
+            width: OmniSizes.avatarSm + 4,
+            height: OmniSizes.avatarSm + 4,
+            radius: OmniRadius.md,
+          ),
           SizedBox(width: OmniSpacing.md),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 FractionallySizedBox(
-                    widthFactor: 0.6, child: OmniSkeleton(height: 13)),
+                  widthFactor: 0.6,
+                  child: OmniSkeleton(height: 13),
+                ),
                 SizedBox(height: OmniSpacing.sm),
                 FractionallySizedBox(
-                    widthFactor: 0.35, child: OmniSkeleton(height: 10)),
+                  widthFactor: 0.35,
+                  child: OmniSkeleton(height: 10),
+                ),
               ],
             ),
           ),
@@ -181,15 +191,20 @@ class OmniSkeletonCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           OmniSkeleton(
-              width: OmniSizes.avatarSm,
-              height: OmniSizes.avatarSm,
-              radius: OmniRadius.md),
+            width: OmniSizes.avatarSm,
+            height: OmniSizes.avatarSm,
+            radius: OmniRadius.md,
+          ),
           Spacer(),
           FractionallySizedBox(
-              widthFactor: 0.8, child: OmniSkeleton(height: 13)),
+            widthFactor: 0.8,
+            child: OmniSkeleton(height: 13),
+          ),
           SizedBox(height: OmniSpacing.sm),
           FractionallySizedBox(
-              widthFactor: 0.45, child: OmniSkeleton(height: 18)),
+            widthFactor: 0.45,
+            child: OmniSkeleton(height: 18),
+          ),
         ],
       ),
     );

@@ -15,16 +15,20 @@ class CustomerSelector extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final c = context.colors;
-    final selectedId = ref.watch(cartProvider.select((s) => s.selectedCustomerId));
-    final customers  = ref.watch(customersProvider).valueOrNull ?? [];
-    final selected   = selectedId != null
+    final selectedId = ref.watch(
+      cartProvider.select((s) => s.selectedCustomerId),
+    );
+    final customers = ref.watch(customersProvider).valueOrNull ?? [];
+    final selected = selectedId != null
         ? customers.where((c) => c.id == selectedId).firstOrNull
         : null;
 
     return OmniCard(
       onTap: () => _showPicker(context, ref),
       padding: const EdgeInsets.symmetric(
-          horizontal: OmniSpacing.md, vertical: OmniSpacing.sm + 2),
+        horizontal: OmniSpacing.md,
+        vertical: OmniSpacing.sm + 2,
+      ),
       borderColor: selected != null ? c.primary.withAlpha(90) : null,
       child: Row(
         children: [
@@ -42,18 +46,24 @@ class CustomerSelector extends ConsumerWidget {
               children: [
                 Text(
                   selected?.name ?? 'Cliente general',
-                  style: context.text.bodyMd.copyWith(fontWeight: FontWeight.w600),
+                  style: context.text.bodyMd.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
                   overflow: TextOverflow.ellipsis,
                 ),
                 Text(
                   selected == null
                       ? 'Toca para asignar un cliente (opcional)'
                       : selected.hasDebt
-                          ? 'Debe ${ref.formatMoney(selected.totalDebt)}'
-                          : 'Sin deuda',
-                  style: context.text.caption.copyWith(
-                    color: selected?.hasDebt ?? false ? c.danger : c.textMuted,
-                  ).tabular,
+                      ? 'Debe ${ref.formatMoney(selected.totalDebt)}'
+                      : 'Sin deuda',
+                  style: context.text.caption
+                      .copyWith(
+                        color: selected?.hasDebt ?? false
+                            ? c.danger
+                            : c.textMuted,
+                      )
+                      .tabular,
                   overflow: TextOverflow.ellipsis,
                 ),
               ],
@@ -63,11 +73,20 @@ class CustomerSelector extends ConsumerWidget {
             IconButton(
               tooltip: 'Quitar cliente',
               visualDensity: VisualDensity.compact,
-              onPressed: () => ref.read(cartProvider.notifier).selectCustomer(null),
-              icon: Icon(LucideIcons.x, color: c.textMuted, size: OmniSizes.iconSm),
+              onPressed: () =>
+                  ref.read(cartProvider.notifier).selectCustomer(null),
+              icon: Icon(
+                LucideIcons.x,
+                color: c.textMuted,
+                size: OmniSizes.iconSm,
+              ),
             )
           else
-            Icon(LucideIcons.chevronRight, color: c.textMuted, size: OmniSizes.iconSm),
+            Icon(
+              LucideIcons.chevronRight,
+              color: c.textMuted,
+              size: OmniSizes.iconSm,
+            ),
         ],
       ),
     );
@@ -107,21 +126,28 @@ class _CustomerPickerState extends ConsumerState<_CustomerPicker> {
   @override
   Widget build(BuildContext context) {
     final customers = ref.watch(customersProvider).valueOrNull ?? [];
-    final currency  = ref.watch(currencyProvider);
+    final currency = ref.watch(currencyProvider);
     final filtered = _q.isEmpty
         ? customers
         : customers
-            .where((c) =>
-                c.name.toLowerCase().contains(_q.toLowerCase()) ||
-                (c.phone?.contains(_q) ?? false))
-            .toList();
+              .where(
+                (c) =>
+                    c.name.toLowerCase().contains(_q.toLowerCase()) ||
+                    (c.phone?.contains(_q) ?? false),
+              )
+              .toList();
 
     return ConstrainedBox(
       constraints: BoxConstraints(
-          maxHeight: MediaQuery.sizeOf(context).height * 0.8),
+        maxHeight: MediaQuery.sizeOf(context).height * 0.8,
+      ),
       child: Padding(
         padding: const EdgeInsets.fromLTRB(
-            OmniSpacing.xl, OmniSpacing.md, OmniSpacing.xl, 0),
+          OmniSpacing.xl,
+          OmniSpacing.md,
+          OmniSpacing.xl,
+          0,
+        ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -150,8 +176,11 @@ class _CustomerPickerState extends ConsumerState<_CustomerPicker> {
                       shrinkWrap: true,
                       padding: const EdgeInsets.only(bottom: OmniSpacing.xl),
                       itemCount: filtered.length,
-                      itemBuilder: (_, i) =>
-                          _CustomerRow(c: filtered[i], currency: currency, onTap: widget.onSelect),
+                      itemBuilder: (_, i) => _CustomerRow(
+                        c: filtered[i],
+                        currency: currency,
+                        onTap: widget.onSelect,
+                      ),
                     ),
             ),
           ],
@@ -162,7 +191,11 @@ class _CustomerPickerState extends ConsumerState<_CustomerPicker> {
 }
 
 class _CustomerRow extends StatelessWidget {
-  const _CustomerRow({required this.c, required this.currency, required this.onTap});
+  const _CustomerRow({
+    required this.c,
+    required this.currency,
+    required this.onTap,
+  });
   final CustomerEntity c;
   final AppCurrency currency;
   final ValueChanged<int> onTap;
@@ -172,8 +205,13 @@ class _CustomerRow extends StatelessWidget {
     return ListTile(
       contentPadding: const EdgeInsets.symmetric(horizontal: OmniSpacing.sm),
       leading: OmniAvatar(name: c.name),
-      title: Text(c.name, style: context.text.bodyMd.copyWith(fontWeight: FontWeight.w600)),
-      subtitle: c.phone != null ? Text(c.phone!, style: context.text.caption) : null,
+      title: Text(
+        c.name,
+        style: context.text.bodyMd.copyWith(fontWeight: FontWeight.w600),
+      ),
+      subtitle: c.phone != null
+          ? Text(c.phone!, style: context.text.caption)
+          : null,
       trailing: c.hasDebt
           ? OmniTag(
               label: CurrencyFormatter.format(c.totalDebt, currency),

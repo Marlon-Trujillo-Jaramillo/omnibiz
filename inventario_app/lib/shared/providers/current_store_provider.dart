@@ -5,8 +5,9 @@ import 'package:inventario_app/shared/providers/database_provider.dart';
 
 const _tag = 'CurrentStore';
 
-final currentStoreProvider =
-    NotifierProvider<CurrentStoreNotifier, int?>(CurrentStoreNotifier.new);
+final currentStoreProvider = NotifierProvider<CurrentStoreNotifier, int?>(
+  CurrentStoreNotifier.new,
+);
 
 class CurrentStoreNotifier extends Notifier<int?> {
   final _storage = const FlutterSecureStorage();
@@ -27,7 +28,10 @@ class CurrentStoreNotifier extends Notifier<int?> {
     }
     final stores = await ref.read(storeRepositoryProvider).getAll();
     if (stores.isNotEmpty) {
-      AppLogger.d(_tag, '_load() → sin storage, usando primera sucursal id=${stores.first.id}');
+      AppLogger.d(
+        _tag,
+        '_load() → sin storage, usando primera sucursal id=${stores.first.id}',
+      );
       await set(stores.first.id);
     }
   }

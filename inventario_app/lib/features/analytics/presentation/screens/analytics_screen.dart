@@ -32,14 +32,17 @@ class _AnalyticsData {
   final List<({String name, int quantity, int revenue})> topProducts;
   final int debtTotal;
   final List<CustomerEntity> debtCustomers;
+
   /// Total de clientes con saldo (no sólo los 5 que se listan).
   final int debtCount;
 
   /// [sales] = ventas de los últimos 30 días (ver [_monthRange]).
   factory _AnalyticsData.from(
-      List<SaleEntity> sales, List<CustomerEntity> customers) {
-    final now      = DateTime.now();
-    final today    = lastDaysRange(1, now: now).from;
+    List<SaleEntity> sales,
+    List<CustomerEntity> customers,
+  ) {
+    final now = DateTime.now();
+    final today = lastDaysRange(1, now: now).from;
     final weekFrom = lastDaysRange(7, now: now).from;
 
     int todayTotal = 0, weekTotal = 0, monthTotal = 0;
@@ -56,21 +59,22 @@ class _AnalyticsData {
     final debtCustomers = _buildDebtCustomers(customers);
 
     return _AnalyticsData(
-      todayTotal:    todayTotal,
-      weekTotal:     weekTotal,
-      monthTotal:    monthTotal,
-      avgTicket:     sales.isEmpty ? 0 : (monthTotal / sales.length).round(),
-      totalSales:    sales.length,
-      topProducts:   topProducts,
-      debtTotal:     debtCustomers.fold(0, (s, c) => s + c.totalDebt),
+      todayTotal: todayTotal,
+      weekTotal: weekTotal,
+      monthTotal: monthTotal,
+      avgTicket: sales.isEmpty ? 0 : (monthTotal / sales.length).round(),
+      totalSales: sales.length,
+      topProducts: topProducts,
+      debtTotal: debtCustomers.fold(0, (s, c) => s + c.totalDebt),
       debtCustomers: debtCustomers.take(5).toList(),
-      debtCount:     debtCustomers.length,
+      debtCount: debtCustomers.length,
     );
   }
 
   static void _accumulateProducts(
-      List<SaleItemEntity> items,
-      Map<String, ({int qty, int rev})> map) {
+    List<SaleItemEntity> items,
+    Map<String, ({int qty, int rev})> map,
+  ) {
     for (final item in items) {
       final existing = map[item.productName];
       map[item.productName] = (
@@ -81,17 +85,22 @@ class _AnalyticsData {
   }
 
   static List<({String name, int quantity, int revenue})> _buildTopProducts(
-      Map<String, ({int qty, int rev})> map) {
-    final sorted = map.entries
-        .map((e) => (name: e.key, quantity: e.value.qty, revenue: e.value.rev))
-        .toList()
-      ..sort((a, b) => b.quantity.compareTo(a.quantity));
+    Map<String, ({int qty, int rev})> map,
+  ) {
+    final sorted =
+        map.entries
+            .map(
+              (e) => (name: e.key, quantity: e.value.qty, revenue: e.value.rev),
+            )
+            .toList()
+          ..sort((a, b) => b.quantity.compareTo(a.quantity));
     // Antes: `..take(5)` en cascada no recortaba nada (devolvía todos).
     return sorted.take(5).toList();
   }
 
   static List<CustomerEntity> _buildDebtCustomers(
-      List<CustomerEntity> customers) {
+    List<CustomerEntity> customers,
+  ) {
     return customers.where((c) => c.hasDebt).toList()
       ..sort((a, b) => b.totalDebt.compareTo(a.totalDebt));
   }
@@ -101,7 +110,7 @@ class _AnalyticsData {
 SalesRange _monthRange() => lastDaysRange(30);
 
 final _analyticsProvider = Provider.autoDispose<_AnalyticsData>((ref) {
-  final sales     =
+  final sales =
       ref.watch(salesInRangeProvider(_monthRange())).valueOrNull ?? [];
   final customers = ref.watch(customersProvider).valueOrNull ?? [];
   return _AnalyticsData.from(sales, customers);
@@ -133,50 +142,59 @@ class AnalyticsScreen extends ConsumerWidget {
           maxWidth: OmniBreakpoints.desktop + OmniSpacing.xxxl * 4,
           child: ListView(
             physics: const AlwaysScrollableScrollPhysics(),
-            padding: const EdgeInsets.fromLTRB(OmniSpacing.base, OmniSpacing.sm,
-                OmniSpacing.base, OmniSpacing.xxl),
+            padding: const EdgeInsets.fromLTRB(
+              OmniSpacing.base,
+              OmniSpacing.sm,
+              OmniSpacing.base,
+              OmniSpacing.xxl,
+            ),
             children: [
               Text('RESUMEN · 30 DÍAS', style: context.text.overline),
               const SizedBox(height: OmniSpacing.md),
-              loading
-                  ? const _KpiSkeleton()
-                  : _KpiGrid(data: data),
+              loading ? const _KpiSkeleton() : _KpiGrid(data: data),
               const SizedBox(height: OmniSpacing.xl),
               const SalesChart(),
               const SizedBox(height: OmniSpacing.xl),
-              LayoutBuilder(builder: (_, constraints) {
-                final top = _Panel(
-                  title: 'Más vendidos',
-                  subtitle: 'Top 5 por unidades · 30 días',
-                  icon: LucideIcons.trophy,
-                  child: loading
-                      ? const OmniSkeletonList(count: 3, padding: EdgeInsets.zero)
-                      : _TopProductsList(products: data.topProducts),
-                );
-                final debts = _Panel(
-                  title: 'Cuentas por cobrar',
-                  subtitle: data.debtCount == 0
-                      ? 'Nadie debe nada'
-                      : '${data.debtCount} cliente${data.debtCount == 1 ? '' : 's'} con saldo',
-                  icon: LucideIcons.notebookPen,
-                  child: _DebtSection(data: data),
-                );
-                if (constraints.maxWidth >= OmniBreakpoints.desktop) {
-                  return Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+              LayoutBuilder(
+                builder: (_, constraints) {
+                  final top = _Panel(
+                    title: 'Más vendidos',
+                    subtitle: 'Top 5 por unidades · 30 días',
+                    icon: LucideIcons.trophy,
+                    child: loading
+                        ? const OmniSkeletonList(
+                            count: 3,
+                            padding: EdgeInsets.zero,
+                          )
+                        : _TopProductsList(products: data.topProducts),
+                  );
+                  final debts = _Panel(
+                    title: 'Cuentas por cobrar',
+                    subtitle: data.debtCount == 0
+                        ? 'Nadie debe nada'
+                        : '${data.debtCount} cliente${data.debtCount == 1 ? '' : 's'} con saldo',
+                    icon: LucideIcons.notebookPen,
+                    child: _DebtSection(data: data),
+                  );
+                  if (constraints.maxWidth >= OmniBreakpoints.desktop) {
+                    return Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(child: top),
+                        const SizedBox(width: OmniSpacing.base),
+                        Expanded(child: debts),
+                      ],
+                    );
+                  }
+                  return Column(
                     children: [
-                      Expanded(child: top),
-                      const SizedBox(width: OmniSpacing.base),
-                      Expanded(child: debts),
+                      top,
+                      const SizedBox(height: OmniSpacing.base),
+                      debts,
                     ],
                   );
-                }
-                return Column(children: [
-                  top,
-                  const SizedBox(height: OmniSpacing.base),
-                  debts,
-                ]);
-              }),
+                },
+              ),
             ],
           ),
         ),
@@ -242,8 +260,9 @@ class _KpiSkeleton extends StatelessWidget {
           children: _wrapGrid(constraints, [
             for (var i = 0; i < 4; i++)
               const OmniSkeleton(
-                  height: OmniSizes.avatarXl + OmniSpacing.xxl,
-                  radius: OmniRadius.lg),
+                height: OmniSizes.avatarXl + OmniSpacing.xxl,
+                radius: OmniRadius.lg,
+              ),
           ]),
         ),
       ),
@@ -326,17 +345,24 @@ class _TopProductsList extends ConsumerWidget {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(p.name,
-                              style: context.text.bodyMd
-                                  .copyWith(fontWeight: FontWeight.w600),
-                              overflow: TextOverflow.ellipsis),
-                          Text('${p.quantity} unidades',
-                              style: context.text.caption.tabular),
+                          Text(
+                            p.name,
+                            style: context.text.bodyMd.copyWith(
+                              fontWeight: FontWeight.w600,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          Text(
+                            '${p.quantity} unidades',
+                            style: context.text.caption.tabular,
+                          ),
                         ],
                       ),
                     ),
-                    Text(ref.formatMoneyCompact(p.revenue),
-                        style: context.text.moneySm),
+                    Text(
+                      ref.formatMoneyCompact(p.revenue),
+                      style: context.text.moneySm,
+                    ),
                   ],
                 ),
                 const SizedBox(height: OmniSpacing.sm),
@@ -375,10 +401,12 @@ class _RankBadge extends StatelessWidget {
       ),
       child: Text(
         '$rank',
-        style: context.text.label.copyWith(
-          color: first ? c.onPrimary : c.textSecondary,
-          fontWeight: FontWeight.w700,
-        ).tabular,
+        style: context.text.label
+            .copyWith(
+              color: first ? c.onPrimary : c.textSecondary,
+              fontWeight: FontWeight.w700,
+            )
+            .tabular,
       ),
     );
   }
@@ -412,11 +440,15 @@ class _DebtSection extends ConsumerWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Deuda total',
-                  style: context.text.label.copyWith(color: c.danger)),
+              Text(
+                'Deuda total',
+                style: context.text.label.copyWith(color: c.danger),
+              ),
               const SizedBox(height: OmniSpacing.xxs),
-              Text(ref.formatMoney(data.debtTotal),
-                  style: context.text.priceLg.copyWith(color: c.danger)),
+              Text(
+                ref.formatMoney(data.debtTotal),
+                style: context.text.priceLg.copyWith(color: c.danger),
+              ),
             ],
           ),
         ),
@@ -429,12 +461,16 @@ class _DebtSection extends ConsumerWidget {
                 OmniAvatar(name: cust.name, radius: OmniSizes.avatarSm / 2),
                 const SizedBox(width: OmniSpacing.md),
                 Expanded(
-                  child: Text(cust.name,
-                      style: context.text.bodyMd,
-                      overflow: TextOverflow.ellipsis),
+                  child: Text(
+                    cust.name,
+                    style: context.text.bodyMd,
+                    overflow: TextOverflow.ellipsis,
+                  ),
                 ),
-                Text(ref.formatMoney(cust.totalDebt),
-                    style: context.text.moneySm.copyWith(color: c.danger)),
+                Text(
+                  ref.formatMoney(cust.totalDebt),
+                  style: context.text.moneySm.copyWith(color: c.danger),
+                ),
               ],
             ),
           ),

@@ -40,19 +40,22 @@ Future<void> _boot(
   } catch (e, st) {
     AppLogger.e('main', 'No se pudo abrir la BD', e, st);
     result = const AppDatabaseLocked(
-        'No se pudo abrir la base de datos. Tus datos no se modificaron.');
+      'No se pudo abrir la base de datos. Tus datos no se modificaron.',
+    );
   }
 
   switch (result) {
     case AppDatabaseReady(:final db):
       await _startApp(db);
     case AppDatabaseLocked(:final reason):
-      runApp(DatabaseErrorApp(
-        themeMode: await ThemeModeNotifier.readStored(),
-        reason: reason,
-        onRetry: () => _boot(opener, opener.open),
-        onReset: () => _boot(opener, opener.resetUnreadable),
-      ));
+      runApp(
+        DatabaseErrorApp(
+          themeMode: await ThemeModeNotifier.readStored(),
+          reason: reason,
+          onRetry: () => _boot(opener, opener.open),
+          onReset: () => _boot(opener, opener.resetUnreadable),
+        ),
+      );
   }
 }
 

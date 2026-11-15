@@ -5,14 +5,13 @@ CustomerEntity _customer({
   int id = 1,
   String name = 'Ana García',
   int totalDebt = 0,
-}) =>
-    CustomerEntity(
-      id:        id,
-      name:      name,
-      totalDebt: totalDebt,
-      createdAt: DateTime(2024),
-      storeId:   0,
-    );
+}) => CustomerEntity(
+  id: id,
+  name: name,
+  totalDebt: totalDebt,
+  createdAt: DateTime(2024),
+  storeId: 0,
+);
 
 void main() {
   group('CustomerEntity.hasDebt', () {

@@ -10,13 +10,29 @@ String _hex(List<int> bytes) =>
 void main() {
   group('pbkdf2HmacSha256 (vectores RFC 7914 §11)', () {
     test('1 iteración', () {
-      final dk = pbkdf2HmacSha256(utf8.encode('password'), utf8.encode('salt'), 1, 32);
-      expect(_hex(dk), '120fb6cffcf8b32c43e7225256c4f837a86548c92ccc35480805987cb70be17b');
+      final dk = pbkdf2HmacSha256(
+        utf8.encode('password'),
+        utf8.encode('salt'),
+        1,
+        32,
+      );
+      expect(
+        _hex(dk),
+        '120fb6cffcf8b32c43e7225256c4f837a86548c92ccc35480805987cb70be17b',
+      );
     });
 
     test('4096 iteraciones', () {
-      final dk = pbkdf2HmacSha256(utf8.encode('password'), utf8.encode('salt'), 4096, 32);
-      expect(_hex(dk), 'c5e478d59288c841aa530db6845c4c8d962893a001ce4e11a4963873aa98134a');
+      final dk = pbkdf2HmacSha256(
+        utf8.encode('password'),
+        utf8.encode('salt'),
+        4096,
+        32,
+      );
+      expect(
+        _hex(dk),
+        'c5e478d59288c841aa530db6845c4c8d962893a001ce4e11a4963873aa98134a',
+      );
     });
   });
 
@@ -45,7 +61,7 @@ void main() {
     });
 
     test('needsRehash: legado o con otras iteraciones', () async {
-      final legacy  = sha256.convert(utf8.encode('1234')).toString();
+      final legacy = sha256.convert(utf8.encode('1234')).toString();
       final current = await PinHasher.hash('1234', iterations: 1000);
 
       expect(PinHasher.needsRehash(legacy, iterations: 1000), isTrue);

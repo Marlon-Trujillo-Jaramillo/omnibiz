@@ -22,8 +22,12 @@ class OmniStateIllustration extends StatelessWidget {
   Widget build(BuildContext context) {
     final c = context.colors;
     final fg = c.toneFg(tone);
-    final outer = compact ? OmniSizes.avatarXl : OmniSizes.avatarXl + OmniSpacing.xxl;
-    final inner = compact ? OmniSizes.avatarLg - OmniSpacing.xs : OmniSizes.avatarXl;
+    final outer = compact
+        ? OmniSizes.avatarXl
+        : OmniSizes.avatarXl + OmniSpacing.xxl;
+    final inner = compact
+        ? OmniSizes.avatarLg - OmniSpacing.xs
+        : OmniSizes.avatarXl;
     return Container(
       width: outer,
       height: outer,
@@ -40,8 +44,11 @@ class OmniStateIllustration extends StatelessWidget {
           color: c.toneBg(tone),
           border: Border.all(color: fg.withAlpha(40)),
         ),
-        child: Icon(icon,
-            size: compact ? OmniSizes.iconLg : OmniSizes.iconXl, color: fg),
+        child: Icon(
+          icon,
+          size: compact ? OmniSizes.iconLg : OmniSizes.iconXl,
+          color: fg,
+        ),
       ),
     );
   }
@@ -65,6 +72,7 @@ class OmniEmptyState extends StatelessWidget {
   final String? actionLabel;
   final IconData? actionIcon;
   final VoidCallback? onAction;
+
   /// Versión reducida para paneles (carrito, secciones del dashboard).
   final bool compact;
 
@@ -82,7 +90,9 @@ class OmniEmptyState extends StatelessWidget {
               SizedBox(height: compact ? OmniSpacing.base : OmniSpacing.xl),
               Text(
                 title,
-                style: compact ? context.text.headingSm : context.text.headingMd,
+                style: compact
+                    ? context.text.headingSm
+                    : context.text.headingMd,
                 textAlign: TextAlign.center,
               ),
               if (subtitle != null) ...[

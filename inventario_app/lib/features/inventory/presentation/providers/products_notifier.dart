@@ -6,8 +6,8 @@ import 'package:inventario_app/shared/providers/database_provider.dart';
 
 final productsProvider =
     AsyncNotifierProvider<ProductsNotifier, List<ProductEntity>>(
-  ProductsNotifier.new,
-);
+      ProductsNotifier.new,
+    );
 
 class ProductsNotifier extends AsyncNotifier<List<ProductEntity>> {
   static const _tag = 'ProductsNotifier';
@@ -60,15 +60,17 @@ class ProductsNotifier extends AsyncNotifier<List<ProductEntity>> {
 // ── Categories ─────────────────────────────────────────────────────────────────
 final categoriesProvider =
     AsyncNotifierProvider<CategoriesNotifier, List<CategoryEntity>>(
-  CategoriesNotifier.new,
-);
+      CategoriesNotifier.new,
+    );
 
 class CategoriesNotifier extends AsyncNotifier<List<CategoryEntity>> {
   @override
   Future<List<CategoryEntity>> build() {
     final storeId = ref.watch(currentStoreProvider);
     if (storeId == null) return Future.value(const []);
-    return ref.watch(productRepositoryProvider).getAllCategories(storeId: storeId);
+    return ref
+        .watch(productRepositoryProvider)
+        .getAllCategories(storeId: storeId);
   }
 
   Future<void> add(CategoryEntity category) async {

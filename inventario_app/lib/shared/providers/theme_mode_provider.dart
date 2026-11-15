@@ -4,8 +4,9 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 /// Tema elegido en Ajustes (Sistema / Claro / Oscuro). Persistido igual que
 /// la moneda y el tipo de negocio.
-final themeModeProvider =
-    NotifierProvider<ThemeModeNotifier, ThemeMode>(ThemeModeNotifier.new);
+final themeModeProvider = NotifierProvider<ThemeModeNotifier, ThemeMode>(
+  ThemeModeNotifier.new,
+);
 
 class ThemeModeNotifier extends Notifier<ThemeMode> {
   ThemeModeNotifier([this._initial]);
@@ -13,7 +14,7 @@ class ThemeModeNotifier extends Notifier<ThemeMode> {
   /// Valor leído en `main` antes de `runApp` (evita un parpadeo de tema).
   final ThemeMode? _initial;
 
-  static const _key     = 'omni_theme_mode';
+  static const _key = 'omni_theme_mode';
   static const _storage = FlutterSecureStorage();
 
   @override
@@ -38,9 +39,9 @@ class ThemeModeNotifier extends Notifier<ThemeMode> {
   }
 
   static ThemeMode _parse(String? value) => ThemeMode.values.firstWhere(
-        (m) => m.name == value,
-        orElse: () => ThemeMode.system,
-      );
+    (m) => m.name == value,
+    orElse: () => ThemeMode.system,
+  );
 
   Future<void> setMode(ThemeMode mode) async {
     state = mode;

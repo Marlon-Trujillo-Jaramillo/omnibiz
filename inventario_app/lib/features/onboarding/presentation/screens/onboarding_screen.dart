@@ -33,12 +33,17 @@ class OnboardingScreen extends ConsumerWidget {
                   borderRadius: OmniRadius.lgAll,
                   boxShadow: c.glow(c.primary),
                 ),
-                child: Icon(LucideIcons.zap,
-                    color: c.onPrimary, size: OmniSizes.iconLg + 4),
+                child: Icon(
+                  LucideIcons.zap,
+                  color: c.onPrimary,
+                  size: OmniSizes.iconLg + 4,
+                ),
               ),
               const SizedBox(height: OmniSpacing.xl),
-              Text('Bienvenido a', style: context.text.bodyLg
-                  .copyWith(color: c.textSecondary)),
+              Text(
+                'Bienvenido a',
+                style: context.text.bodyLg.copyWith(color: c.textSecondary),
+              ),
               Text('OmniBiz', style: context.text.displayLg),
               const SizedBox(height: OmniSpacing.sm),
               Text(
@@ -46,7 +51,10 @@ class OnboardingScreen extends ConsumerWidget {
                 style: context.text.bodyMd.copyWith(color: c.textSecondary),
               ),
               const SizedBox(height: OmniSpacing.xxl),
-              Text('¿QUÉ TIPO DE NEGOCIO TIENES?', style: context.text.overline),
+              Text(
+                '¿QUÉ TIPO DE NEGOCIO TIENES?',
+                style: context.text.overline,
+              ),
               const SizedBox(height: OmniSpacing.md),
               _BusinessCard(
                 title: 'Tienda de ropa / Retail',
@@ -113,8 +121,11 @@ class _BusinessCard extends StatelessWidget {
               ],
             ),
           ),
-          Icon(LucideIcons.chevronRight,
-              size: OmniSizes.iconMd, color: context.colors.textMuted),
+          Icon(
+            LucideIcons.chevronRight,
+            size: OmniSizes.iconMd,
+            color: context.colors.textMuted,
+          ),
         ],
       ),
     );

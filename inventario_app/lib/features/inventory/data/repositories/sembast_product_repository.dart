@@ -11,7 +11,7 @@ class SembastProductRepository implements ProductRepository {
   SembastProductRepository(this._db);
 
   final Database _db;
-  static final _products   = intMapStoreFactory.store('products');
+  static final _products = intMapStoreFactory.store('products');
   static final _categories = intMapStoreFactory.store('categories');
 
   @override
@@ -39,7 +39,10 @@ class SembastProductRepository implements ProductRepository {
   @override
   Future<void> save(ProductEntity entity) async {
     final isNew = entity.id == 0;
-    AppLogger.i(_tag, 'save() name="${entity.name}" id=${entity.id} isNew=$isNew');
+    AppLogger.i(
+      _tag,
+      'save() name="${entity.name}" id=${entity.id} isNew=$isNew',
+    );
     final map = entity.toModel().toMap();
     try {
       await _db.transaction((txn) async {

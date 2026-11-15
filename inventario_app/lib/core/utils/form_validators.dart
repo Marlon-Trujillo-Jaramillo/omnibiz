@@ -26,7 +26,10 @@ abstract final class FormValidators {
     return null;
   }
 
-  static String? nonNegativeInt(String? value, [String fieldName = 'El valor']) {
+  static String? nonNegativeInt(
+    String? value, [
+    String fieldName = 'El valor',
+  ]) {
     if (value == null || value.trim().isEmpty) {
       return '$fieldName es obligatorio';
     }

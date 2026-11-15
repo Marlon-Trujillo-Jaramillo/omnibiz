@@ -13,6 +13,7 @@ class OmniPressable extends StatefulWidget {
 
   final Widget child;
   final bool enabled;
+
   /// Escala mientras está presionado.
   final double scale;
 
