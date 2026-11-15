@@ -12,7 +12,7 @@ jobs:
       run:
         working-directory: inventario_app
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: subosito/flutter-action@v2
         with:
           # Pinned to the local version: a newer stable can deprecate APIs
