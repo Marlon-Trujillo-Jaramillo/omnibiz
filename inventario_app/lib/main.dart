@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/date_symbol_data_local.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:sembast/sembast.dart';
 
@@ -15,6 +16,12 @@ import 'shared/providers/theme_mode_provider.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // La UI formatea fechas en español (DateFormat(..., 'es') en DateFormatter),
+  // que necesita los datos del locale cargados antes de usarse; sin esto, la
+  // primera fecha con locale lanza LocaleDataException y la pantalla queda en
+  // blanco (p. ej. el grafico de ventas del dashboard).
+  await initializeDateFormatting('es');
 
   AppLogger.i('main', 'Iniciando OmniBiz...');
 
