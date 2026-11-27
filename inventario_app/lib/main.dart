@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/date_symbol_data_local.dart';
-import 'package:path_provider/path_provider.dart';
 import 'package:sembast/sembast.dart';
 
 import 'app/app.dart';
 import 'core/database/app_database.dart';
+import 'core/database/platform/db_platform.dart';
 import 'core/database/database_error_app.dart';
 import 'core/database/store_migration.dart';
 import 'core/utils/app_currency.dart';
@@ -25,9 +25,9 @@ void main() async {
 
   AppLogger.i('main', 'Iniciando OmniBiz...');
 
-  final dir = await getApplicationDocumentsDirectory();
+  final dir = await resolveOmniDbDirectory();
   final opener = AppDatabaseOpener(
-    directory: dir.path,
+    directory: dir,
     legacyCurrencyCode: (await CurrencyNotifier.readStored()).code,
   );
   AppLogger.i('main', 'Abriendo BD cifrada en: ${opener.encryptedPath}');

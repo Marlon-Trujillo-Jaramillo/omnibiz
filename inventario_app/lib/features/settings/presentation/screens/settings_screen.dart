@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -90,8 +91,12 @@ class SettingsScreen extends ConsumerWidget {
                 '${AppRoutes.dashboardBase}/${AppRoutes.stores}',
               ),
             ),
-            const _SectionHeader('Respaldo de datos'),
-            const BackupSection(),
+            // El respaldo a archivo (.omnibak) usa almacenamiento local que no
+            // existe en el navegador; solo se muestra en la app instalada.
+            if (!kIsWeb) ...[
+              const _SectionHeader('Respaldo de datos'),
+              const BackupSection(),
+            ],
             const _SectionHeader('Moneda del sistema'),
             OmniCard(
               padding: EdgeInsets.zero,
