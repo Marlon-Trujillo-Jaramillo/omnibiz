@@ -1,7 +1,6 @@
 import 'dart:io';
-import 'dart:typed_data';
 
-import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:intl/intl.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:pdf/pdf.dart';
@@ -23,8 +22,12 @@ abstract final class ReceiptService {
   static Future<void> generateAndSaveReceipt(SaleEntity sale) async {
     try {
       final bytes = await _buildPdfBytes(sale);
-      final file = await _saveToFile(sale.id, bytes);
-      debugPrint('[ReceiptService] PDF guardado: ${file.path}');
+      // En web no hay sistema de archivos: se imprime/comparte directo, sin
+      // guardar una copia local (eso es solo para la app instalada).
+      if (!kIsWeb) {
+        final file = await _saveToFile(sale.id, bytes);
+        debugPrint('[ReceiptService] PDF guardado: ${file.path}');
+      }
       await Printing.layoutPdf(
         onLayout: (_) async => bytes,
         name: 'recibo_${sale.id}.pdf',

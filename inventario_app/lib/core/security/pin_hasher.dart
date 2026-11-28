@@ -1,9 +1,8 @@
 import 'dart:convert';
-import 'dart:isolate';
 import 'dart:math';
-import 'dart:typed_data';
 
 import 'package:crypto/crypto.dart';
+import 'package:flutter/foundation.dart';
 
 /// Hash de PIN con PBKDF2-HMAC-SHA256 + sal aleatoria.
 ///
@@ -16,16 +15,18 @@ abstract final class PinHasher {
   static const _keyLen = 32;
 
   /// Genera el valor a almacenar para [pin] con una sal nueva.
-  /// Corre en un isolate: el KDF es lento a propósito.
-  static Future<String> hash(String pin, {required int iterations}) {
+  /// El KDF (lento a propósito) corre vía [compute]: en un isolate en móvil y
+  /// escritorio, y en el hilo principal en web (donde no hay isolates).
+  static Future<String> hash(String pin, {required int iterations}) async {
     final rnd = Random.secure();
     final salt = Uint8List.fromList(
       List.generate(_saltLen, (_) => rnd.nextInt(256)),
     );
-    return Isolate.run(() {
-      final dk = pbkdf2HmacSha256(utf8.encode(pin), salt, iterations, _keyLen);
-      return '$_scheme\$$iterations\$${base64.encode(salt)}\$${base64.encode(dk)}';
-    });
+    final dk = await compute(
+      _derivarPbkdf2,
+      _Pbkdf2Args(utf8.encode(pin), salt, iterations, _keyLen),
+    );
+    return '$_scheme\$$iterations\$${base64.encode(salt)}\$${base64.encode(dk)}';
   }
 
   /// Verifica [pin] contra un valor almacenado (nuevo o legado) en tiempo constante.
@@ -42,9 +43,9 @@ abstract final class PinHasher {
     if (iterations == null || iterations <= 0) return false;
     final salt = base64.decode(parts[2]);
     final expected = base64.decode(parts[3]);
-    final dk = await Isolate.run(
-      () =>
-          pbkdf2HmacSha256(utf8.encode(pin), salt, iterations, expected.length),
+    final dk = await compute(
+      _derivarPbkdf2,
+      _Pbkdf2Args(utf8.encode(pin), salt, iterations, expected.length),
     );
     return constantTimeEquals(dk, expected);
   }
@@ -98,3 +99,18 @@ Uint8List pbkdf2HmacSha256(
   }
   return out;
 }
+
+/// Argumentos del KDF que viajan a [compute]; tipos simples y serializables
+/// para poder cruzar a un isolate.
+class _Pbkdf2Args {
+  const _Pbkdf2Args(this.password, this.salt, this.iterations, this.keyLength);
+
+  final List<int> password;
+  final List<int> salt;
+  final int iterations;
+  final int keyLength;
+}
+
+/// Callback de nivel superior para [compute] (no admite closures).
+Uint8List _derivarPbkdf2(_Pbkdf2Args a) =>
+    pbkdf2HmacSha256(a.password, a.salt, a.iterations, a.keyLength);

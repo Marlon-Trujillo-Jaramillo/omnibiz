@@ -1,11 +1,9 @@
-import 'dart:io';
-
 import 'package:path/path.dart' as p;
-import 'package:sembast/sembast_io.dart';
 import 'package:sembast/utils/database_utils.dart';
 import 'package:sembast/utils/sembast_import_export.dart';
 
 import 'package:inventario_app/core/database/database_encryption.dart';
+import 'package:inventario_app/core/database/platform/db_platform.dart';
 import 'package:inventario_app/core/database/money_migration.dart';
 import 'package:inventario_app/core/utils/app_constants.dart';
 import 'package:inventario_app/core/utils/app_logger.dart';
@@ -44,7 +42,7 @@ class AppDatabaseOpener {
     required this.legacyCurrencyCode,
     this.keyStore = const DatabaseKeyStore(),
     DatabaseFactory? factory,
-  }) : factory = factory ?? databaseFactoryIo;
+  }) : factory = factory ?? omniDatabaseFactory();
 
   final String directory;
 
@@ -71,7 +69,7 @@ class AppDatabaseOpener {
       );
     }
 
-    if (File(encryptedPath).existsSync()) {
+    if (omniFileExists(encryptedPath)) {
       if (storedKey == null) {
         return const AppDatabaseLocked(
           'Se encontraron datos cifrados pero falta la clave de cifrado '
@@ -84,7 +82,7 @@ class AppDatabaseOpener {
     // Sin BD cifrada: instalación nueva o migración desde texto plano. Aquí sí
     // es seguro crear una clave nueva: no hay nada cifrado que se pierda.
     final key = storedKey ?? await keyStore.create();
-    if (File(plainPath).existsSync()) {
+    if (omniFileExists(plainPath)) {
       await _encryptPlaintext(key);
     }
     return _openEncrypted(key, cleanupPlain: false);
@@ -94,11 +92,10 @@ class AppDatabaseOpener {
   /// `omnibiz_enc.db.unreadable-<timestamp>`), genera clave nueva y abre una
   /// BD vacía.
   Future<AppDatabaseResult> resetUnreadable() async {
-    final file = File(encryptedPath);
-    if (file.existsSync()) {
+    if (omniFileExists(encryptedPath)) {
       final backup =
           '$encryptedPath.unreadable-${DateTime.now().millisecondsSinceEpoch}';
-      await file.rename(backup);
+      await omniFileRename(encryptedPath, backup);
       AppLogger.w(_tag, 'BD ilegible apartada en $backup');
     }
     final key = await keyStore.create();
@@ -131,8 +128,8 @@ class AppDatabaseOpener {
     }
     // Restos de una migración interrumpida tras el renombrado: la BD cifrada
     // ya fue verificada, el texto plano sobra.
-    if (cleanupPlain && File(plainPath).existsSync()) {
-      await File(plainPath).delete();
+    if (cleanupPlain && omniFileExists(plainPath)) {
+      await omniFileDelete(plainPath);
       AppLogger.i(_tag, 'BD en texto plano residual eliminada');
     }
     return AppDatabaseReady(db);
@@ -143,8 +140,7 @@ class AppDatabaseOpener {
   Future<void> _encryptPlaintext(List<int> key) async {
     AppLogger.i(_tag, 'migrando BD en texto plano → cifrada');
     final codec = aesGcmSembastCodec(key);
-    final tmp = File(_tmpPath);
-    if (tmp.existsSync()) await tmp.delete();
+    if (omniFileExists(_tmpPath)) await omniFileDelete(_tmpPath);
 
     final plainDb = await factory.openDatabase(plainPath);
     final expected = await _countRecords(plainDb);
@@ -164,14 +160,14 @@ class AppDatabaseOpener {
     final actual = await _countRecords(check);
     await check.close();
     if (!_sameCounts(expected, actual)) {
-      await tmp.delete();
+      await omniFileDelete(_tmpPath);
       throw StateError(
         'Migración de cifrado: conteos distintos $expected vs $actual',
       );
     }
 
-    await tmp.rename(encryptedPath); // atómico en el mismo sistema de archivos
-    await File(plainPath).delete();
+    await omniFileRename(_tmpPath, encryptedPath); // atómico en disco
+    await omniFileDelete(plainPath);
     AppLogger.i(_tag, 'BD cifrada lista: $actual');
   }
 
